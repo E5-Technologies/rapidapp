@@ -37,7 +37,7 @@ const Materials = () => {
           </div>
         </div>
         
-        <SearchBar placeholder="What are you craving?" />
+        <SearchBar placeholder="What material are you looking for?" />
         <CategoryScroll />
       </div>
 
