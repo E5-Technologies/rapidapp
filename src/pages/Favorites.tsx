@@ -1,5 +1,4 @@
 import { Camera, Download } from "lucide-react";
-import SearchBar from "@/components/SearchBar";
 import LocationListItem from "@/components/LocationListItem";
 import BottomNav from "@/components/BottomNav";
 
@@ -28,7 +27,6 @@ const Favorites = () => {
         </div>
         
         <h1 className="text-2xl font-bold px-4 py-3">Favorites</h1>
-        <SearchBar placeholder="What are you craving?" />
       </div>
 
       {/* Favorites List */}
