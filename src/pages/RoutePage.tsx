@@ -41,7 +41,7 @@ const Route = () => {
           <ViewToggle view={view} onViewChange={setView} />
         </div>
         
-        <SearchBar placeholder="What are you craving?" onFilterClick={() => {}} />
+        <SearchBar placeholder="Where do you want to go?" onFilterClick={() => {}} />
       </div>
 
       {/* Map or List View */}
