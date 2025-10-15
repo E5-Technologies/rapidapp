@@ -1,4 +1,4 @@
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface ProductCardProps {
@@ -17,7 +17,10 @@ const ProductCard = ({ company, logo, title, product, rating, image }: ProductCa
         <div className="flex items-center gap-3">
           <img src={logo} alt={company} className="w-16 h-16 object-contain" />
           <div>
-            <h3 className="font-bold text-sm">{company}</h3>
+            <div className="flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-bold text-sm">{company}</h3>
+            </div>
           </div>
         </div>
         <button className="p-2 hover:bg-muted rounded-full transition-colors">
