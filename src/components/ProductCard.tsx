@@ -25,15 +25,14 @@ const ProductCard = ({ company, logo, title, product, rating, image }: ProductCa
         </button>
       </div>
       
-      <div className="relative">
-        <img src={image} alt={product} className="w-full h-32 object-contain" />
-        <Badge className="absolute bottom-2 right-2 bg-primary text-primary-foreground">
-          Order
-        </Badge>
-      </div>
-      
       <div>
-        <h4 className="font-medium text-xs text-muted-foreground">{title}</h4>
+        <h4 className="font-medium text-xs text-muted-foreground mb-2">{title}</h4>
+        <div className="relative mb-3">
+          <img src={image} alt={product} className="w-full h-40 object-cover rounded-lg" />
+          <Badge className="absolute bottom-2 right-2 bg-primary text-primary-foreground">
+            Order
+          </Badge>
+        </div>
         <p className="text-sm font-medium">{product}</p>
         <div className="flex items-center gap-1 mt-1">
           {Array.from({ length: 5 }).map((_, i) => (
