@@ -4,7 +4,8 @@ const categories = [
   { name: "Valves", icon: "🔧" },
   { name: "Pumps", icon: "⚙️" },
   { name: "Piping", icon: "🔩" },
-  { name: "Automation", icon: "🏭" },
+  { name: "Instrumentation", icon: "🏭" },
+  { name: "Electrical", icon: "⚡" },
   { name: "Tanks", icon: "🛢️" },
 ];
 
