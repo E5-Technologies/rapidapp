@@ -58,6 +58,17 @@ const Route = () => {
     { name: "Marcellus 4H", type: "other", lat: 41.7654, lng: -77.8901, operator: "Range Resources", field: "Marcellus" },
     { name: "Marcellus 7H", type: "other", lat: 41.8765, lng: -77.7890, operator: "EQT Corporation", field: "Marcellus" },
     
+    // Tank Batteries
+    { name: "Permian Central TB", type: "tank", lat: 31.9567, lng: -102.4321, operator: "Devon Energy", field: "Permian Basin" },
+    { name: "Midland Basin TB-1", type: "tank", lat: 31.8890, lng: -102.1234, operator: "Pioneer Natural", field: "Midland Basin" },
+    { name: "Spraberry Tank Battery", type: "tank", lat: 31.8123, lng: -102.3567, operator: "Diamondback", field: "Spraberry" },
+    { name: "Delaware TB-5", type: "tank", lat: 32.0456, lng: -103.4567, operator: "Occidental", field: "Delaware Basin" },
+    { name: "Eagle Ford Tank Battery", type: "tank", lat: 28.5123, lng: -98.2345, operator: "EOG Resources", field: "Eagle Ford" },
+    { name: "Bakken Central TB", type: "tank", lat: 47.8901, lng: -103.3456, operator: "Continental", field: "Bakken" },
+    { name: "Wattenberg TB-2", type: "tank", lat: 40.1890, lng: -104.6234, operator: "PDC Energy", field: "Wattenberg" },
+    { name: "Haynesville Tank Battery", type: "tank", lat: 32.4890, lng: -93.9234, operator: "Chesapeake", field: "Haynesville" },
+    { name: "Marcellus TB-3", type: "tank", lat: 41.8234, lng: -77.8345, operator: "Range Resources", field: "Marcellus" },
+    
     // Legacy locations with updated coordinates
     { name: "Red Tank 19 CTB", type: "tank", lat: 31.7234, lng: -102.5678, operator: "Devon Energy", field: "Permian Basin" },
     { name: "Red Tank 19 CGL", type: "tank", lat: 31.7345, lng: -102.5789, operator: "Devon Energy", field: "Permian Basin" },
