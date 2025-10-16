@@ -8,9 +8,10 @@ interface ProductCardProps {
   product: string;
   rating: number;
   image: string;
+  dataSheet?: string;
 }
 
-const ProductCard = ({ company, logo, title, product, rating, image }: ProductCardProps) => {
+const ProductCard = ({ company, logo, title, product, rating, image, dataSheet }: ProductCardProps) => {
   return (
     <div className="bg-card rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between">
@@ -41,6 +42,16 @@ const ProductCard = ({ company, logo, title, product, rating, image }: ProductCa
             </span>
           ))}
         </div>
+        {dataSheet && (
+          <a 
+            href={dataSheet} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block mt-3 px-4 py-2 bg-primary text-primary-foreground text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            View Data Sheet
+          </a>
+        )}
       </div>
     </div>
   );
