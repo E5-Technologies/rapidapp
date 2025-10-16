@@ -151,7 +151,111 @@ const Materials = () => {
     { company: "Weir", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Vertical Pump", product: "Weir Hazleton SP", rating: 4, image: "https://www.global.weir/products/hazleton-sp.jpg", dataSheet: "https://www.global.weir/datasheets/hazleton-sp.pdf" },
   ];
 
-  const products = selectedCategory === "Valves" ? valveProducts : selectedCategory === "Pumps" ? pumpProducts : [];
+  const pipingProducts = [
+    // Victaulic - Grooved Piping
+    { company: "Victaulic", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Grooved Coupling", product: "Victaulic Style 77", rating: 5, image: "https://www.victaulic.com/-/media/images/products/style-77.jpg", dataSheet: "https://www.victaulic.com/datasheets/style-77.pdf" },
+    { company: "Victaulic", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Flexible Coupling", product: "Victaulic Style 107N", rating: 5, image: "https://www.victaulic.com/-/media/images/products/style-107n.jpg", dataSheet: "https://www.victaulic.com/datasheets/style-107n.pdf" },
+    { company: "Victaulic", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Rigid Coupling", product: "Victaulic Style 177N", rating: 4, image: "https://www.victaulic.com/-/media/images/products/style-177n.jpg", dataSheet: "https://www.victaulic.com/datasheets/style-177n.pdf" },
+
+    // Anvil - Pipe Fittings
+    { company: "Anvil", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Malleable Elbow", product: "Anvil Fig. 90", rating: 5, image: "https://www.anvilintl.com/products/fig-90-elbow.jpg", dataSheet: "https://www.anvilintl.com/datasheets/fig-90.pdf" },
+    { company: "Anvil", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Tee Fitting", product: "Anvil Fig. 130", rating: 5, image: "https://www.anvilintl.com/products/fig-130-tee.jpg", dataSheet: "https://www.anvilintl.com/datasheets/fig-130.pdf" },
+    { company: "Anvil", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Reducer", product: "Anvil Fig. 240", rating: 4, image: "https://www.anvilintl.com/products/fig-240-reducer.jpg", dataSheet: "https://www.anvilintl.com/datasheets/fig-240.pdf" },
+
+    // Spears - PVC Piping
+    { company: "Spears", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "PVC Schedule 80", product: "Spears 8808 Series", rating: 5, image: "https://www.spearsmfg.com/products/8808-series.jpg", dataSheet: "https://www.spearsmfg.com/datasheets/8808-series.pdf" },
+    { company: "Spears", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "PVC Ball Valve", product: "Spears 2630 Series", rating: 4, image: "https://www.spearsmfg.com/products/2630-series.jpg", dataSheet: "https://www.spearsmfg.com/datasheets/2630-series.pdf" },
+    { company: "Spears", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "CPVC Fitting", product: "Spears 4800 Series", rating: 5, image: "https://www.spearsmfg.com/products/4800-series.jpg", dataSheet: "https://www.spearsmfg.com/datasheets/4800-series.pdf" },
+
+    // Uponor - PEX Piping
+    { company: "Uponor", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "PEX-a Tubing", product: "Uponor AquaPEX", rating: 5, image: "https://www.uponor.com/products/aquapex.jpg", dataSheet: "https://www.uponor.com/datasheets/aquapex.pdf" },
+    { company: "Uponor", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "ProPEX Fitting", product: "Uponor LF4525", rating: 5, image: "https://www.uponor.com/products/lf4525.jpg", dataSheet: "https://www.uponor.com/datasheets/lf4525.pdf" },
+
+    // Mueller - Copper Piping
+    { company: "Mueller", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Type L Copper", product: "Mueller Streamline", rating: 5, image: "https://www.muellerindustries.com/products/streamline.jpg", dataSheet: "https://www.muellerindustries.com/datasheets/streamline.pdf" },
+    { company: "Mueller", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Copper Fitting", product: "Mueller Wrot W04000", rating: 4, image: "https://www.muellerindustries.com/products/w04000.jpg", dataSheet: "https://www.muellerindustries.com/datasheets/w04000.pdf" },
+  ];
+
+  const instrumentationProducts = [
+    // Rosemount (Emerson) - Pressure Transmitters
+    { company: "Rosemount", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Pressure Transmitter", product: "Rosemount 3051", rating: 5, image: "https://www.emerson.com/documents/automation/product-catalog-rosemount-3051-en-123846.pdf.image.jpg", dataSheet: "https://www.emerson.com/documents/automation/product-catalog-rosemount-3051-en-123846.pdf" },
+    { company: "Rosemount", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Temperature Transmitter", product: "Rosemount 3144P", rating: 5, image: "https://www.emerson.com/documents/automation/product-catalog-rosemount-3144p-en-123847.pdf.image.jpg", dataSheet: "https://www.emerson.com/documents/automation/product-catalog-rosemount-3144p-en-123847.pdf" },
+    { company: "Rosemount", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Flow Meter", product: "Rosemount 8800D", rating: 4, image: "https://www.emerson.com/documents/automation/product-catalog-rosemount-8800d-en-123848.pdf.image.jpg", dataSheet: "https://www.emerson.com/documents/automation/product-catalog-rosemount-8800d-en-123848.pdf" },
+
+    // Endress+Hauser - Process Instruments
+    { company: "Endress+Hauser", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Level Transmitter", product: "E+H Micropilot FMR57", rating: 5, image: "https://www.endress.com/products/fmr57.jpg", dataSheet: "https://www.endress.com/datasheets/fmr57.pdf" },
+    { company: "Endress+Hauser", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Flow Meter", product: "E+H Proline Promag", rating: 5, image: "https://www.endress.com/products/promag.jpg", dataSheet: "https://www.endress.com/datasheets/promag.pdf" },
+    { company: "Endress+Hauser", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "pH Sensor", product: "E+H Orbisint CPS11D", rating: 4, image: "https://www.endress.com/products/cps11d.jpg", dataSheet: "https://www.endress.com/datasheets/cps11d.pdf" },
+
+    // Yokogawa - Analyzers
+    { company: "Yokogawa", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Pressure Transmitter", product: "Yokogawa EJA Series", rating: 5, image: "https://www.yokogawa.com/products/eja-series.jpg", dataSheet: "https://www.yokogawa.com/datasheets/eja-series.pdf" },
+    { company: "Yokogawa", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Flow Meter", product: "Yokogawa ROTAMASS", rating: 5, image: "https://www.yokogawa.com/products/rotamass.jpg", dataSheet: "https://www.yokogawa.com/datasheets/rotamass.pdf" },
+    { company: "Yokogawa", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Temperature Transmitter", product: "Yokogawa YTA Series", rating: 4, image: "https://www.yokogawa.com/products/yta-series.jpg", dataSheet: "https://www.yokogawa.com/datasheets/yta-series.pdf" },
+
+    // Honeywell - Control Systems
+    { company: "Honeywell", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Pressure Sensor", product: "Honeywell STG Series", rating: 5, image: "https://www.honeywell.com/products/stg-series.jpg", dataSheet: "https://www.honeywell.com/datasheets/stg-series.pdf" },
+    { company: "Honeywell", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Temperature Sensor", product: "Honeywell RTD", rating: 4, image: "https://www.honeywell.com/products/rtd.jpg", dataSheet: "https://www.honeywell.com/datasheets/rtd.pdf" },
+
+    // Siemens - Process Instruments
+    { company: "Siemens", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Flow Meter", product: "Siemens SITRANS F", rating: 5, image: "https://www.siemens.com/products/sitrans-f.jpg", dataSheet: "https://www.siemens.com/datasheets/sitrans-f.pdf" },
+    { company: "Siemens", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Pressure Transmitter", product: "Siemens SITRANS P", rating: 5, image: "https://www.siemens.com/products/sitrans-p.jpg", dataSheet: "https://www.siemens.com/datasheets/sitrans-p.pdf" },
+  ];
+
+  const electricalProducts = [
+    // ABB - Motors & Drives
+    { company: "ABB", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "VFD Drive", product: "ABB ACS880", rating: 5, image: "https://www.abb.com/products/acs880.jpg", dataSheet: "https://www.abb.com/datasheets/acs880.pdf" },
+    { company: "ABB", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Electric Motor", product: "ABB M3BP Series", rating: 5, image: "https://www.abb.com/products/m3bp.jpg", dataSheet: "https://www.abb.com/datasheets/m3bp.pdf" },
+    { company: "ABB", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Circuit Breaker", product: "ABB Tmax XT", rating: 4, image: "https://www.abb.com/products/tmax-xt.jpg", dataSheet: "https://www.abb.com/datasheets/tmax-xt.pdf" },
+
+    // Schneider Electric - Power Distribution
+    { company: "Schneider Electric", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Motor Starter", product: "Schneider TeSys D", rating: 5, image: "https://www.se.com/products/tesys-d.jpg", dataSheet: "https://www.se.com/datasheets/tesys-d.pdf" },
+    { company: "Schneider Electric", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "VFD Drive", product: "Schneider Altivar 320", rating: 5, image: "https://www.se.com/products/altivar-320.jpg", dataSheet: "https://www.se.com/datasheets/altivar-320.pdf" },
+    { company: "Schneider Electric", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Circuit Breaker", product: "Schneider Masterpact MTZ", rating: 4, image: "https://www.se.com/products/masterpact-mtz.jpg", dataSheet: "https://www.se.com/datasheets/masterpact-mtz.pdf" },
+
+    // Siemens - Automation
+    { company: "Siemens", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "VFD Drive", product: "Siemens SINAMICS G120", rating: 5, image: "https://www.siemens.com/products/sinamics-g120.jpg", dataSheet: "https://www.siemens.com/datasheets/sinamics-g120.pdf" },
+    { company: "Siemens", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Motor Starter", product: "Siemens SIRIUS 3RT", rating: 5, image: "https://www.siemens.com/products/sirius-3rt.jpg", dataSheet: "https://www.siemens.com/datasheets/sirius-3rt.pdf" },
+    { company: "Siemens", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Circuit Breaker", product: "Siemens SENTRON 3VA", rating: 4, image: "https://www.siemens.com/products/sentron-3va.jpg", dataSheet: "https://www.siemens.com/datasheets/sentron-3va.pdf" },
+
+    // Eaton - Power Management
+    { company: "Eaton", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Circuit Breaker", product: "Eaton Magnum DS", rating: 5, image: "https://www.eaton.com/products/magnum-ds.jpg", dataSheet: "https://www.eaton.com/datasheets/magnum-ds.pdf" },
+    { company: "Eaton", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Motor Starter", product: "Eaton XTCE Series", rating: 4, image: "https://www.eaton.com/products/xtce.jpg", dataSheet: "https://www.eaton.com/datasheets/xtce.pdf" },
+
+    // Rockwell Automation - Industrial Control
+    { company: "Rockwell", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "VFD Drive", product: "Rockwell PowerFlex 525", rating: 5, image: "https://www.rockwellautomation.com/products/powerflex-525.jpg", dataSheet: "https://www.rockwellautomation.com/datasheets/powerflex-525.pdf" },
+    { company: "Rockwell", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Motor Starter", product: "Rockwell SMC-50", rating: 5, image: "https://www.rockwellautomation.com/products/smc-50.jpg", dataSheet: "https://www.rockwellautomation.com/datasheets/smc-50.pdf" },
+  ];
+
+  const vesselsProducts = [
+    // Nooter - Pressure Vessels
+    { company: "Nooter", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Pressure Vessel", product: "Nooter ASME U-Stamp", rating: 5, image: "https://www.nooter.com/products/pressure-vessel.jpg", dataSheet: "https://www.nooter.com/datasheets/pressure-vessel.pdf" },
+    { company: "Nooter", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Heat Exchanger", product: "Nooter Shell & Tube", rating: 5, image: "https://www.nooter.com/products/heat-exchanger.jpg", dataSheet: "https://www.nooter.com/datasheets/heat-exchanger.pdf" },
+
+    // CB&I (McDermott) - Storage Tanks
+    { company: "McDermott", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Storage Tank", product: "CB&I Cone Roof", rating: 5, image: "https://www.mcdermott.com/products/cone-roof-tank.jpg", dataSheet: "https://www.mcdermott.com/datasheets/cone-roof-tank.pdf" },
+    { company: "McDermott", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Floating Roof Tank", product: "CB&I IFR Tank", rating: 5, image: "https://www.mcdermott.com/products/ifr-tank.jpg", dataSheet: "https://www.mcdermott.com/datasheets/ifr-tank.pdf" },
+
+    // Chartwell - Process Vessels
+    { company: "Chartwell", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Reactor Vessel", product: "Chartwell CSTR", rating: 5, image: "https://www.chartwell.com/products/cstr.jpg", dataSheet: "https://www.chartwell.com/datasheets/cstr.pdf" },
+    { company: "Chartwell", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Distillation Column", product: "Chartwell Trayed Tower", rating: 4, image: "https://www.chartwell.com/products/trayed-tower.jpg", dataSheet: "https://www.chartwell.com/datasheets/trayed-tower.pdf" },
+
+    // Matrix Service - Field Erected Tanks
+    { company: "Matrix Service", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "API 650 Tank", product: "Matrix FET Series", rating: 5, image: "https://www.matrixservice.com/products/fet-series.jpg", dataSheet: "https://www.matrixservice.com/datasheets/fet-series.pdf" },
+    { company: "Matrix Service", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Spherical Tank", product: "Matrix LPG Sphere", rating: 5, image: "https://www.matrixservice.com/products/lpg-sphere.jpg", dataSheet: "https://www.matrixservice.com/datasheets/lpg-sphere.pdf" },
+
+    // L&T - Pressure Vessels
+    { company: "L&T", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Pressure Vessel", product: "L&T ASME VIII", rating: 5, image: "https://www.larsentoubro.com/products/asme-viii.jpg", dataSheet: "https://www.larsentoubro.com/datasheets/asme-viii.pdf" },
+    { company: "L&T", logo: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop", title: "Reactor", product: "L&T Hydrocracker", rating: 4, image: "https://www.larsentoubro.com/products/hydrocracker.jpg", dataSheet: "https://www.larsentoubro.com/datasheets/hydrocracker.pdf" },
+  ];
+
+  const products = 
+    selectedCategory === "Valves" ? valveProducts :
+    selectedCategory === "Pumps" ? pumpProducts :
+    selectedCategory === "Piping" ? pipingProducts :
+    selectedCategory === "Instrumentation" ? instrumentationProducts :
+    selectedCategory === "Electrical" ? electricalProducts :
+    selectedCategory === "Vessels" ? vesselsProducts :
+    [];
 
   return (
     <div className="min-h-screen bg-background pb-24">
