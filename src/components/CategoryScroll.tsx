@@ -6,7 +6,7 @@ const categories = [
   { name: "Piping", icon: "🔩" },
   { name: "Instrumentation", icon: "🏭" },
   { name: "Electrical", icon: "⚡" },
-  { name: "Tanks", icon: "🛢️" },
+  { name: "Vessels", icon: "🛢️" },
 ];
 
 interface CategoryScrollProps {
