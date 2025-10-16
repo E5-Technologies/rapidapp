@@ -1,4 +1,4 @@
-import { ChevronRight, Triangle, AlertCircle } from "lucide-react";
+import { ChevronRight, Circle, Cylinder } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface LocationListItemProps {
@@ -9,8 +9,9 @@ interface LocationListItemProps {
 
 const LocationListItem = ({ name, status, type }: LocationListItemProps) => {
   const getIcon = () => {
-    if (type === "tank") return <Triangle className="w-4 h-4 text-accent fill-accent" />;
-    return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
+    if (type === "tank") return <Cylinder className="w-4 h-4 text-accent" />;
+    if (type === "other") return <Circle className="w-4 h-4 text-primary" />;
+    return <Circle className="w-4 h-4 text-muted-foreground" />;
   };
 
   return (
