@@ -4,9 +4,10 @@ import { Input } from "@/components/ui/input";
 interface SearchBarProps {
   placeholder?: string;
   onFilterClick?: () => void;
+  onChange?: (value: string) => void;
 }
 
-const SearchBar = ({ placeholder = "What are you craving?", onFilterClick }: SearchBarProps) => {
+const SearchBar = ({ placeholder = "What are you craving?", onFilterClick, onChange }: SearchBarProps) => {
   return (
     <div className="flex items-center gap-2 px-4 py-3">
       <div className="relative flex-1">
@@ -14,6 +15,7 @@ const SearchBar = ({ placeholder = "What are you craving?", onFilterClick }: Sea
         <Input
           placeholder={placeholder}
           className="pl-10 rounded-full bg-input border-0 h-11"
+          onChange={(e) => onChange?.(e.target.value)}
         />
       </div>
       {onFilterClick && (
