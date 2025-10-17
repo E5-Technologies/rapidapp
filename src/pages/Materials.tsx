@@ -1,12 +1,22 @@
 import { Camera } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import SearchBar from "@/components/SearchBar";
 import CategoryScroll from "@/components/CategoryScroll";
 import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
+import MaterialIdentificationDialog from "@/components/MaterialIdentificationDialog";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const Materials = () => {
   const [selectedCategory, setSelectedCategory] = useState("Valves");
+  const [showDialog, setShowDialog] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [identification, setIdentification] = useState<any>(null);
+  const [matchedProducts, setMatchedProducts] = useState<any[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   const valveProducts = [
     // Emerson (Fisher) - Stainless Steel Materials
@@ -285,13 +295,133 @@ const Materials = () => {
       </div>
 
       {/* Camera FAB */}
-      <button className="fixed bottom-28 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg z-40">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={handleImageCapture}
+      />
+      <button 
+        onClick={() => fileInputRef.current?.click()}
+        className="fixed bottom-28 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg z-40 hover:bg-primary/90 transition-colors"
+      >
         <Camera className="w-6 h-6" />
       </button>
+
+      <MaterialIdentificationDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        isAnalyzing={isAnalyzing}
+        capturedImage={capturedImage}
+        identification={identification}
+        matchedProducts={matchedProducts}
+      />
 
       <BottomNav />
     </div>
   );
+
+  async function handleImageCapture(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // Convert image to base64
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = reader.result as string;
+        setCapturedImage(base64Image);
+        setShowDialog(true);
+        setIsAnalyzing(true);
+        setIdentification(null);
+        setMatchedProducts([]);
+
+        try {
+          // Call edge function to identify material
+          const { data, error } = await supabase.functions.invoke('identify-material', {
+            body: { image: base64Image }
+          });
+
+          if (error) throw error;
+
+          console.log("Identification result:", data);
+          setIdentification(data);
+
+          // Find matching products based on identification
+          const matches = findMatchingProducts(data);
+          setMatchedProducts(matches);
+
+          toast({
+            title: "Material Identified",
+            description: `Found ${matches.length} matching products`,
+          });
+        } catch (error) {
+          console.error("Error identifying material:", error);
+          toast({
+            title: "Analysis Failed",
+            description: "Could not identify the material. Please try again.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsAnalyzing(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (error) {
+      console.error("Error capturing image:", error);
+      toast({
+        title: "Capture Failed",
+        description: "Could not capture image. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
+
+  function findMatchingProducts(identification: any) {
+    if (!identification || !identification.category) return [];
+
+    // Get all products for the identified category
+    let categoryProducts: any[] = [];
+    switch (identification.category) {
+      case "Valves":
+        categoryProducts = valveProducts;
+        break;
+      case "Pumps":
+        categoryProducts = pumpProducts;
+        break;
+      case "Piping":
+        categoryProducts = pipingProducts;
+        break;
+      case "Instrumentation":
+        categoryProducts = instrumentationProducts;
+        break;
+      case "Electrical":
+        categoryProducts = electricalProducts;
+        break;
+      case "Vessels":
+        categoryProducts = vesselsProducts;
+        break;
+      default:
+        return [];
+    }
+
+    // Filter products based on search terms and type
+    const searchTerms = [
+      identification.type?.toLowerCase(),
+      identification.manufacturer?.toLowerCase(),
+      ...(identification.searchTerms || []).map((term: string) => term.toLowerCase())
+    ].filter(Boolean);
+
+    const matches = categoryProducts.filter(product => {
+      const productText = `${product.company} ${product.title} ${product.product}`.toLowerCase();
+      return searchTerms.some(term => productText.includes(term));
+    });
+
+    // Return top 5 matches
+    return matches.slice(0, 5);
+  }
 };
 
 export default Materials;

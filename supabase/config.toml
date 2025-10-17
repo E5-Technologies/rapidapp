@@ -1,0 +1,4 @@
+project_id = "rwinelghzsuetpgrzwph"
+
+[functions.identify-material]
+verify_jwt = false
