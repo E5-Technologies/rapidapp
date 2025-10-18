@@ -190,11 +190,11 @@ const Route = () => {
           </div>
         </div>
         
+        <h1 className="text-2xl font-bold px-4 py-3">Location</h1>
+        
         <div className="py-3">
           <ViewToggle view={view} onViewChange={setView} />
         </div>
-        
-        <h1 className="text-2xl font-bold px-4 py-3">Location</h1>
         
         <SearchBar
           placeholder="Search wells, operators, or fields..." 
