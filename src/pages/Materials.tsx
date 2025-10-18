@@ -5,6 +5,7 @@ import CategoryScroll from "@/components/CategoryScroll";
 import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
 import MaterialIdentificationDialog from "@/components/MaterialIdentificationDialog";
+import MaterialSearchDialog from "@/components/MaterialSearchDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -33,6 +34,10 @@ const Materials = () => {
   const [matchedProducts, setMatchedProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSearchDialog, setShowSearchDialog] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -170,6 +175,49 @@ const Materials = () => {
     }
   }
 
+  async function handleSearch(query: string) {
+    if (!query.trim()) return;
+
+    setSearchQuery(query);
+    setShowSearchDialog(true);
+    setIsSearching(true);
+    setSearchResult(null);
+
+    try {
+      // Get user location (simplified - in production, use geolocation API)
+      const userLocation = "United States"; // Default location
+
+      console.log('Searching for material:', query);
+
+      // Call edge function to search the web
+      const { data, error } = await supabase.functions.invoke('search-material', {
+        body: { 
+          query: query.trim(),
+          userLocation 
+        }
+      });
+
+      if (error) throw error;
+
+      console.log('Search result:', data);
+      setSearchResult(data);
+
+      toast({
+        title: "Search Complete",
+        description: `Found information for ${data.productName || query}`,
+      });
+    } catch (error) {
+      console.error('Error searching material:', error);
+      toast({
+        title: "Search Failed",
+        description: "Could not find material information. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -183,7 +231,14 @@ const Materials = () => {
           </div>
         </div>
         
-        <SearchBar placeholder="What material are you looking for?" />
+        <SearchBar 
+          placeholder="Search by serial or model number..." 
+          onChange={(value) => {
+            if (value.trim()) {
+              handleSearch(value);
+            }
+          }}
+        />
         <CategoryScroll 
           selectedCategory={selectedCategory}
           onCategorySelect={setSelectedCategory}
@@ -254,6 +309,13 @@ const Materials = () => {
         capturedImage={capturedImage}
         identification={identification}
         matchedProducts={matchedProducts}
+      />
+
+      <MaterialSearchDialog
+        open={showSearchDialog}
+        onOpenChange={setShowSearchDialog}
+        isSearching={isSearching}
+        searchResult={searchResult}
       />
 
       <BottomNav />
