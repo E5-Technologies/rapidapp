@@ -1,11 +1,11 @@
 import { ManufacturerDataScraper } from "@/components/ManufacturerDataScraper";
 import BottomNav from "@/components/BottomNav";
 
-const Admin = () => {
+const Scraper = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-6">Admin Panel</h1>
+        <h1 className="text-3xl font-bold mb-6">Data Scraper</h1>
         <ManufacturerDataScraper />
       </div>
       <BottomNav />
@@ -13,4 +13,4 @@ const Admin = () => {
   );
 };
 
-export default Admin;
+export default Scraper;

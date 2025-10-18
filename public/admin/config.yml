@@ -1,0 +1,37 @@
+backend:
+  name: git-gateway
+  branch: main
+
+media_folder: "public/images/uploads"
+public_folder: "/images/uploads"
+
+collections:
+  - name: "materials"
+    label: "Materials"
+    folder: "content/materials"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Title", name: "title", widget: "string" }
+      - { label: "Product Name", name: "product_name", widget: "string" }
+      - { label: "Category", name: "category", widget: "select", options: ["Valves", "Pumps", "Piping", "Instrumentation", "Electrical", "Vessels"] }
+      - { label: "Manufacturer", name: "manufacturer", widget: "string" }
+      - { label: "Model Number", name: "model_number", widget: "string", required: false }
+      - { label: "Description", name: "description", widget: "text", required: false }
+      - { label: "Image", name: "image", widget: "image", required: false }
+      - { label: "Datasheet URL", name: "datasheet_url", widget: "string", required: false }
+      - { label: "Rating", name: "rating", widget: "number", value_type: "float", min: 0, max: 5, step: 0.1, default: 4.0 }
+      - { label: "Specifications", name: "specifications", widget: "list", required: false }
+
+  - name: "manufacturers"
+    label: "Manufacturers"
+    folder: "content/manufacturers"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Name", name: "name", widget: "string" }
+      - { label: "Logo", name: "logo", widget: "image", required: false }
+      - { label: "Website", name: "website", widget: "string", required: false }
+      - { label: "Description", name: "description", widget: "text", required: false }
+      - { label: "Contact Email", name: "contact_email", widget: "string", required: false }
+      - { label: "Contact Phone", name: "contact_phone", widget: "string", required: false }
