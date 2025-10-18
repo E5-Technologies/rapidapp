@@ -1,4 +1,4 @@
-import { Camera } from "lucide-react";
+import { Camera, Filter } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
 import CategoryScroll from "@/components/CategoryScroll";
@@ -8,6 +8,14 @@ import MaterialIdentificationDialog from "@/components/MaterialIdentificationDia
 import MaterialSearchDialog from "@/components/MaterialSearchDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 
 interface Material {
   id: string;
@@ -27,6 +35,8 @@ interface Material {
 
 const Materials = () => {
   const [selectedCategory, setSelectedCategory] = useState("Valves");
+  const [selectedManufacturer, setSelectedManufacturer] = useState<string>("all");
+  const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -59,6 +69,12 @@ const Materials = () => {
         if (error) throw error;
         
         setMaterials(data || []);
+        
+        // Extract unique manufacturers for filter
+        const uniqueManufacturers = Array.from(
+          new Set(data?.map(m => m.manufacturer?.name).filter(Boolean) || [])
+        ).sort();
+        setManufacturers(uniqueManufacturers as string[]);
       } catch (error) {
         console.error('Error fetching materials:', error);
         toast({
@@ -73,6 +89,16 @@ const Materials = () => {
 
     fetchMaterials();
   }, [selectedCategory, toast]);
+
+  // Reset manufacturer filter when category changes
+  useEffect(() => {
+    setSelectedManufacturer("all");
+  }, [selectedCategory]);
+
+  // Filter materials by manufacturer
+  const filteredMaterials = selectedManufacturer === "all" 
+    ? materials 
+    : materials.filter(m => m.manufacturer?.name === selectedManufacturer);
 
   async function handleImageCapture(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -243,18 +269,36 @@ const Materials = () => {
           selectedCategory={selectedCategory}
           onCategorySelect={setSelectedCategory}
         />
+        
+        {/* Manufacturer Filter */}
+        <div className="px-4 pb-2 flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Filter by manufacturer" />
+            </SelectTrigger>
+            <SelectContent className="bg-popover z-50">
+              <SelectItem value="all">All Manufacturers</SelectItem>
+              {manufacturers.map((manufacturer) => (
+                <SelectItem key={manufacturer} value={manufacturer}>
+                  {manufacturer}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Product List */}
       <div className="px-4 space-y-8 mt-4">
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
-        ) : materials.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No materials found in this category.</div>
+        ) : filteredMaterials.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">No materials found.</div>
         ) : (
           // Group materials by manufacturer
           Object.entries(
-            materials.reduce((acc, material) => {
+            filteredMaterials.reduce((acc, material) => {
               const manufacturerName = material.manufacturer?.name || 'Unknown';
               if (!acc[manufacturerName]) {
                 acc[manufacturerName] = [];
