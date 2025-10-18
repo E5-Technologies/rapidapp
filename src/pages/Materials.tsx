@@ -49,7 +49,7 @@ const Materials = () => {
           `)
           .eq('category', selectedCategory)
           .order('purchase_count', { ascending: false })
-          .limit(40);
+          .limit(50);
 
         if (error) throw error;
         
@@ -138,7 +138,7 @@ const Materials = () => {
         `)
         .eq('category', identification.category)
         .order('purchase_count', { ascending: false })
-        .limit(40);
+        .limit(50);
 
       if (error) throw error;
 
@@ -191,23 +191,42 @@ const Materials = () => {
       </div>
 
       {/* Product List */}
-      <div className="px-4 space-y-4 mt-4">
+      <div className="px-4 space-y-8 mt-4">
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
         ) : materials.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">No materials found in this category.</div>
         ) : (
-          materials.map((material) => (
-            <ProductCard
-              key={material.id}
-              company={material.manufacturer?.name || 'Unknown'}
-              logo={material.manufacturer?.logo_url || ''}
-              title={material.title}
-              product={material.product_name}
-              rating={material.rating}
-              image={material.image_url || ''}
-              dataSheet={material.datasheet_url}
-            />
+          // Group materials by manufacturer
+          Object.entries(
+            materials.reduce((acc, material) => {
+              const manufacturerName = material.manufacturer?.name || 'Unknown';
+              if (!acc[manufacturerName]) {
+                acc[manufacturerName] = [];
+              }
+              acc[manufacturerName].push(material);
+              return acc;
+            }, {} as Record<string, Material[]>)
+          ).map(([manufacturerName, manufacturerMaterials]) => (
+            <div key={manufacturerName} className="space-y-3">
+              <h2 className="text-lg font-semibold text-foreground sticky top-[180px] bg-background py-2 z-[5]">
+                {manufacturerName}
+              </h2>
+              <div className="space-y-4">
+                {manufacturerMaterials.map((material) => (
+                  <ProductCard
+                    key={material.id}
+                    company={material.manufacturer?.name || 'Unknown'}
+                    logo={material.manufacturer?.logo_url || ''}
+                    title={material.title}
+                    product={material.product_name}
+                    rating={material.rating}
+                    image={material.image_url || ''}
+                    dataSheet={material.datasheet_url}
+                  />
+                ))}
+              </div>
+            </div>
           ))
         )}
       </div>
