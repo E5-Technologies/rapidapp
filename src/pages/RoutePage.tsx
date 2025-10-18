@@ -4,6 +4,7 @@ import SearchBar from "@/components/SearchBar";
 import ViewToggle from "@/components/ViewToggle";
 import LocationListItem from "@/components/LocationListItem";
 import BottomNav from "@/components/BottomNav";
+import InteractiveMap from "@/components/InteractiveMap";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -206,23 +207,12 @@ const Route = () => {
       {/* Map or List View */}
       {view === "map" ? (
         <div className="relative h-[calc(100vh-240px)]">
-          {/* Map Placeholder */}
+          {/* Interactive Satellite Map */}
           <div className="w-full h-full bg-muted/30 relative overflow-hidden">
-            <img 
-              src={`https://api.mapbox.com/styles/v1/mapbox/light-v10/static/${selectedLocation ? `${selectedLocation.lng},${selectedLocation.lat},12` : userLocation ? `${userLocation.lng},${userLocation.lat},10` : '-102.0779,31.9973,8'}/800x600@2x?access_token=pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbTJyaXU4Z3gwMXM3MmtvZnI2cTBhaHNrIn0.HWjUBcJNrhHjy0-5r2HUpA`}
-              alt="Map"
-              className="w-full h-full object-cover"
+            <InteractiveMap 
+              userLocation={userLocation}
+              selectedLocation={selectedLocation}
             />
-            
-            {/* Current Location Marker */}
-            {userLocation && (
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <div className="w-4 h-4 bg-blue-500 rounded-full border-4 border-white shadow-lg animate-pulse" />
-                <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium bg-blue-500 text-white px-2 py-1 rounded">
-                  Your Location
-                </div>
-              </div>
-            )}
 
             {/* Search Results Indicator */}
             {searchQuery && filteredLocations.length > 0 && !selectedLocation && (
