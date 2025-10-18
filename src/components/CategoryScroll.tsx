@@ -1,8 +1,8 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Settings, Gauge, GitBranch, Activity, Zap, Container } from "lucide-react";
+import { Wrench, Gauge, GitBranch, Activity, Zap, Container } from "lucide-react";
 
 const categories = [
-  { name: "Valves", icon: Settings },
+  { name: "Valves", icon: Wrench },
   { name: "Pumps", icon: Gauge },
   { name: "Piping", icon: GitBranch },
   { name: "Instrumentation", icon: Activity },
