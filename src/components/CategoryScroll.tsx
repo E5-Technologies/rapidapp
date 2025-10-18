@@ -1,12 +1,13 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Settings, Gauge, GitBranch, Activity, Zap, Container } from "lucide-react";
 
 const categories = [
-  { name: "Valves", icon: "🔧" },
-  { name: "Pumps", icon: "⚙️" },
-  { name: "Piping", icon: "🔩" },
-  { name: "Instrumentation", icon: "🏭" },
-  { name: "Electrical", icon: "⚡" },
-  { name: "Vessels", icon: "🛢️" },
+  { name: "Valves", icon: Settings },
+  { name: "Pumps", icon: Gauge },
+  { name: "Piping", icon: GitBranch },
+  { name: "Instrumentation", icon: Activity },
+  { name: "Electrical", icon: Zap },
+  { name: "Vessels", icon: Container },
 ];
 
 interface CategoryScrollProps {
@@ -24,10 +25,10 @@ const CategoryScroll = ({ selectedCategory = "Valves", onCategorySelect }: Categ
             onClick={() => onCategorySelect?.(category.name)}
             className="flex flex-col items-center gap-2 flex-shrink-0"
           >
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl transition-colors ${
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
               selectedCategory === category.name ? "bg-primary text-primary-foreground" : "bg-muted"
             }`}>
-              {category.icon}
+              <category.icon className="w-6 h-6" />
             </div>
             <span className={`text-xs font-medium ${selectedCategory === category.name ? "text-primary" : ""}`}>
               {category.name}
