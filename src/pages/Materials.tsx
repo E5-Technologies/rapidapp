@@ -257,7 +257,9 @@ const Materials = () => {
           </div>
         </div>
         
-        <SearchBar 
+        <h1 className="text-2xl font-bold px-4 py-3">Browse</h1>
+        
+        <SearchBar
           placeholder="Search by serial or model number..." 
           onChange={(value) => {
             if (value.trim()) {
