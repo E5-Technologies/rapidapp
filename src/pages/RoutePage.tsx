@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Camera, Download, Pin, Star, X, Navigation } from "lucide-react";
+import { Download, Pin, Star, X, Navigation } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import ViewToggle from "@/components/ViewToggle";
 import LocationListItem from "@/components/LocationListItem";
@@ -332,11 +332,6 @@ const Route = () => {
           )}
         </div>
       )}
-
-      {/* Camera FAB */}
-      <button className="fixed bottom-28 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg z-40">
-        <Camera className="w-6 h-6" />
-      </button>
 
       <BottomNav />
     </div>

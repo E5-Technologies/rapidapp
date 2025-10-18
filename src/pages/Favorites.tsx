@@ -1,4 +1,4 @@
-import { Camera, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import LocationListItem from "@/components/LocationListItem";
 import BottomNav from "@/components/BottomNav";
 
@@ -40,11 +40,6 @@ const Favorites = () => {
           </div>
         ))}
       </div>
-
-      {/* Camera FAB */}
-      <button className="fixed bottom-28 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg z-40">
-        <Camera className="w-6 h-6" />
-      </button>
 
       <BottomNav />
     </div>
