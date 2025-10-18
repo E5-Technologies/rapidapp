@@ -14,7 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      manufacturers: {
+        Row: {
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      materials: {
+        Row: {
+          category: string
+          created_at: string
+          datasheet_url: string | null
+          id: string
+          image_url: string | null
+          last_updated: string
+          manufacturer_id: string
+          product_name: string
+          purchase_count: number
+          rating: number
+          title: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          datasheet_url?: string | null
+          id?: string
+          image_url?: string | null
+          last_updated?: string
+          manufacturer_id: string
+          product_name: string
+          purchase_count?: number
+          rating?: number
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          datasheet_url?: string | null
+          id?: string
+          image_url?: string | null
+          last_updated?: string
+          manufacturer_id?: string
+          product_name?: string
+          purchase_count?: number
+          rating?: number
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materials_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
