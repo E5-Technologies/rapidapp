@@ -194,7 +194,9 @@ const Route = () => {
           <ViewToggle view={view} onViewChange={setView} />
         </div>
         
-        <SearchBar 
+        <h1 className="text-2xl font-bold px-4 py-3">Location</h1>
+        
+        <SearchBar
           placeholder="Search wells, operators, or fields..." 
           onFilterClick={() => {}}
           onChange={(value) => setSearchQuery(value)}
