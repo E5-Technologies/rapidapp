@@ -204,15 +204,15 @@ const Route = () => {
         
         <h1 className="text-2xl font-bold px-4 py-2">Location</h1>
         
+        <div className="py-3">
+          <ViewToggle view={view} onViewChange={setView} />
+        </div>
+        
         <SearchBar
           placeholder="Search wells, operators, or fields..." 
           onFilterClick={() => {}}
           onChange={(value) => setSearchQuery(value)}
         />
-        
-        <div className="py-3">
-          <ViewToggle view={view} onViewChange={setView} />
-        </div>
       </div>
 
       {/* Map or List View */}
