@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Download, Pin, Star, X, Navigation } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
-import logo from "@/assets/rapid-logo.png";
 
 import ViewToggle from "@/components/ViewToggle";
 import LocationListItem from "@/components/LocationListItem";
@@ -191,10 +190,6 @@ const Route = () => {
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
           </div>
-        </div>
-        
-        <div className="flex items-center justify-center px-4 py-3">
-          <img src={logo} alt="Rapid Logo" className="h-10 w-auto" />
         </div>
         
         <h1 className="text-2xl font-bold px-4 py-3">Location</h1>
