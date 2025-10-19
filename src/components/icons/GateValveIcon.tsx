@@ -14,11 +14,14 @@ const GateValveIcon = ({ className }: GateValveIconProps) => {
       strokeLinejoin="round"
       className={className}
     >
-      {/* Gate valve symbol - two triangles forming bowtie shape */}
-      <path d="M4 12 L12 4 L12 20 L4 12 Z" />
-      <path d="M20 12 L12 4 L12 20 L20 12 Z" />
-      {/* Stem line on top */}
-      <line x1="12" y1="4" x2="12" y2="1" />
+      {/* Left triangle */}
+      <path d="M3 12 L12 6 L12 18 Z" />
+      {/* Right triangle */}
+      <path d="M21 12 L12 6 L12 18 Z" />
+      {/* Vertical stem */}
+      <line x1="12" y1="6" x2="12" y2="2" />
+      {/* Horizontal top handle */}
+      <line x1="9" y1="2" x2="15" y2="2" />
     </svg>
   );
 };
