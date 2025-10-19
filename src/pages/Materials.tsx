@@ -310,11 +310,7 @@ const Materials = () => {
               return acc;
             }, {} as Record<string, Material[]>)
           ).map(([manufacturerName, manufacturerMaterials]) => (
-            <div key={manufacturerName} className="space-y-3">
-              <h2 className="text-lg font-semibold text-foreground sticky top-[180px] bg-background py-2 z-[5]">
-                {manufacturerName}
-              </h2>
-              <div className="space-y-4">
+            <div key={manufacturerName} className="space-y-4">
                 {manufacturerMaterials.map((material) => (
                   <ProductCard
                     key={material.id}
@@ -327,7 +323,6 @@ const Materials = () => {
                     dataSheet={material.datasheet_url}
                   />
                 ))}
-              </div>
             </div>
           ))
         )}
