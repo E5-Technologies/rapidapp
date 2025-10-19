@@ -1,8 +1,9 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Octagon, Fan, Network, Gauge, Zap, Cylinder } from "lucide-react";
+import { Fan, Network, Gauge, Zap, Cylinder } from "lucide-react";
+import GateValveIcon from "@/components/icons/GateValveIcon";
 
 const categories = [
-  { name: "Valves", icon: Octagon },
+  { name: "Valves", icon: GateValveIcon },
   { name: "Pumps", icon: Fan },
   { name: "Piping", icon: Network },
   { name: "Instrumentation", icon: Gauge },
