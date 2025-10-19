@@ -7,6 +7,7 @@ import Materials from "./pages/Materials";
 import RoutePage from "./pages/RoutePage";
 import Favorites from "./pages/Favorites";
 import Scraper from "./pages/Scraper";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/route" element={<RoutePage />} />
           <Route path="/favorites" element={<Favorites />} />
           <Route path="/scraper" element={<Scraper />} />
+          <Route path="/auth" element={<Auth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
