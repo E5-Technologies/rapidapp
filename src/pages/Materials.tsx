@@ -259,7 +259,7 @@ const Materials = () => {
         </div>
         
         <div className="flex items-center justify-center px-4 py-3">
-          <img src={logo} alt="Rapid Logo" className="h-8 w-auto" />
+          <img src={logo} alt="Rapid Logo" className="h-12 w-auto" />
         </div>
         
         <SearchBar
