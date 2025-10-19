@@ -279,11 +279,10 @@ const Materials = () => {
         />
         
         {/* Manufacturer Filter */}
-        <div className="px-4 pb-3 flex items-center justify-end gap-2">
+        <div className="px-4 pb-3 flex items-center justify-end">
           <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-            <SelectTrigger className="w-auto h-8 text-xs border-none bg-muted/50 hover:bg-muted gap-2 px-3">
-              <Filter className="w-3 h-3" />
-              <SelectValue placeholder="Filter" />
+            <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
+              <Filter className="w-4 h-4 mx-auto" />
             </SelectTrigger>
             <SelectContent className="bg-popover z-50 text-xs">
               <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
