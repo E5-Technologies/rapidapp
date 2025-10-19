@@ -279,16 +279,16 @@ const Materials = () => {
         />
         
         {/* Manufacturer Filter */}
-        <div className="px-4 pb-2 flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
+        <div className="px-4 pb-3 flex items-center justify-end gap-2">
           <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Filter by manufacturer" />
+            <SelectTrigger className="w-auto h-8 text-xs border-none bg-muted/50 hover:bg-muted gap-2 px-3">
+              <Filter className="w-3 h-3" />
+              <SelectValue placeholder="Filter" />
             </SelectTrigger>
-            <SelectContent className="bg-popover z-50">
-              <SelectItem value="all">All Manufacturers</SelectItem>
+            <SelectContent className="bg-popover z-50 text-xs">
+              <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
               {manufacturers.map((manufacturer) => (
-                <SelectItem key={manufacturer} value={manufacturer}>
+                <SelectItem key={manufacturer} value={manufacturer} className="text-xs">
                   {manufacturer}
                 </SelectItem>
               ))}
