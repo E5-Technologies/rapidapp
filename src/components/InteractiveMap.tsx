@@ -1,6 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface InteractiveMapProps {
   userLocation: { lat: number; lng: number } | null;
@@ -12,12 +15,39 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
   const map = useRef<mapboxgl.Map | null>(null);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   const locationMarker = useRef<mapboxgl.Marker | null>(null);
+  const [tokenInput, setTokenInput] = useState('');
+  const [mapboxToken, setMapboxToken] = useState<string | null>(null);
+  const [needsToken, setNeedsToken] = useState(false);
+
+  // Check for token on mount
+  useEffect(() => {
+    const envToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+    if (envToken && envToken !== '${MAPBOX_PUBLIC_TOKEN}' && !envToken.startsWith('${')) {
+      setMapboxToken(envToken);
+    } else {
+      // Check localStorage for saved token
+      const savedToken = localStorage.getItem('mapbox_token');
+      if (savedToken) {
+        setMapboxToken(savedToken);
+      } else {
+        setNeedsToken(true);
+      }
+    }
+  }, []);
+
+  const handleTokenSubmit = () => {
+    if (tokenInput.trim()) {
+      localStorage.setItem('mapbox_token', tokenInput.trim());
+      setMapboxToken(tokenInput.trim());
+      setNeedsToken(false);
+    }
+  };
 
   useEffect(() => {
-    if (!mapContainer.current || !userLocation) return;
+    if (!mapContainer.current || !userLocation || !mapboxToken) return;
 
     // Initialize map with satellite style
-    mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+    mapboxgl.accessToken = mapboxToken;
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -55,7 +85,7 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
       locationMarker.current?.remove();
       map.current?.remove();
     };
-  }, [userLocation]);
+  }, [userLocation, mapboxToken]);
 
   // Update selected location marker
   useEffect(() => {
@@ -100,6 +130,44 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
       });
     }
   }, [selectedLocation, userLocation]);
+
+  if (needsToken) {
+    return (
+      <div className="w-full h-full flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Mapbox Token Required</CardTitle>
+            <CardDescription>
+              Please enter your Mapbox public token to view the map
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              type="text"
+              placeholder="pk.eyJ1..."
+              value={tokenInput}
+              onChange={(e) => setTokenInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleTokenSubmit()}
+            />
+            <Button onClick={handleTokenSubmit} className="w-full">
+              Save Token
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Get your token from{' '}
+              <a 
+                href="https://account.mapbox.com/access-tokens/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                mapbox.com
+              </a>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div ref={mapContainer} className="w-full h-full" />
