@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
 interface SearchBarProps {
@@ -18,14 +18,6 @@ const SearchBar = ({ placeholder = "What are you craving?", onFilterClick, onCha
           onChange={(e) => onChange?.(e.target.value)}
         />
       </div>
-      {onFilterClick && (
-        <button
-          onClick={onFilterClick}
-          className="w-11 h-11 rounded-full bg-input flex items-center justify-center"
-        >
-          <SlidersHorizontal className="w-5 h-5" />
-        </button>
-      )}
     </div>
   );
 };
