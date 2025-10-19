@@ -1,13 +1,13 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { CircleDot, Fan, GitBranch, Activity, Zap, Container } from "lucide-react";
+import { Gauge, Fan, Network, SlidersHorizontal, Zap, Cylinder } from "lucide-react";
 
 const categories = [
-  { name: "Valves", icon: CircleDot },
+  { name: "Valves", icon: Gauge },
   { name: "Pumps", icon: Fan },
-  { name: "Piping", icon: GitBranch },
-  { name: "Instrumentation", icon: Activity },
+  { name: "Piping", icon: Network },
+  { name: "Instrumentation", icon: SlidersHorizontal },
   { name: "Electrical", icon: Zap },
-  { name: "Vessels", icon: Container },
+  { name: "Vessels", icon: Cylinder },
 ];
 
 interface CategoryScrollProps {
