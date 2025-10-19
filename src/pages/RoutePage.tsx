@@ -192,7 +192,7 @@ const Route = () => {
           </div>
         </div>
         
-        <div className="flex items-center px-4 py-3">
+        <div className="flex items-center px-4 py-1">
           <img src={logo} alt="Rapid Logo" className="h-24 w-auto" />
         </div>
         
