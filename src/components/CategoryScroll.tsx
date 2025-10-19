@@ -1,8 +1,8 @@
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Gauge, Fan, Network, SlidersHorizontal, Zap, Cylinder } from "lucide-react";
+import { SeparatorVertical, Fan, Network, Gauge, Zap, Cylinder } from "lucide-react";
 
 const categories = [
-  { name: "Valves", icon: SlidersHorizontal },
+  { name: "Valves", icon: SeparatorVertical },
   { name: "Pumps", icon: Fan },
   { name: "Piping", icon: Network },
   { name: "Instrumentation", icon: Gauge },
