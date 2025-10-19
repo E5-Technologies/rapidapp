@@ -82,8 +82,8 @@ const Settings = () => {
           </div>
         </div>
         
-        <div className="flex items-center justify-center px-4 py-3">
-          <img src={logo} alt="Rapid Logo" className="h-20 w-auto" />
+        <div className="flex items-center px-4 py-3">
+          <img src={logo} alt="Rapid Logo" className="h-24 w-auto" />
         </div>
         
         <h1 className="text-2xl font-bold px-4 py-3">Settings</h1>
