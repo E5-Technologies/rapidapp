@@ -43,19 +43,7 @@ const BottomNav = () => {
             location.pathname === "/" ? "text-foreground" : "text-muted-foreground"
           }`}
         >
-          <svg 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-            className="w-7 h-7"
-          >
-            <rect x="4" y="10" width="4" height="4" rx="1" />
-            <rect x="16" y="10" width="4" height="4" rx="1" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-          </svg>
+          <div className="h-7" />
           <span className="text-xs font-semibold">Materials</span>
         </Link>
 
