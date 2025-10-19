@@ -43,7 +43,24 @@ const BottomNav = () => {
             location.pathname === "/" ? "text-foreground" : "text-muted-foreground"
           }`}
         >
-          <div className="h-7" />
+          <svg 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2.5" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            className="w-7 h-7"
+          >
+            {/* Valve/pipe icon */}
+            <circle cx="6" cy="12" r="2" />
+            <circle cx="18" cy="12" r="2" />
+            <line x1="8" y1="12" x2="16" y2="12" strokeWidth="3" />
+            <line x1="6" y1="10" x2="6" y2="8" />
+            <line x1="6" y1="16" x2="6" y2="14" />
+            <line x1="18" y1="10" x2="18" y2="8" />
+            <line x1="18" y1="16" x2="18" y2="14" />
+          </svg>
           <span className="text-xs font-semibold">Materials</span>
         </Link>
 
