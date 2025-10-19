@@ -259,7 +259,7 @@ const Materials = () => {
         </div>
         
         <div className="flex items-center justify-center px-4 py-3">
-          <img src={logo} alt="Rapid Logo" className="h-16 w-auto" />
+          <img src={logo} alt="Rapid Logo" className="h-20 w-auto" />
         </div>
         
         <h1 className="text-2xl font-bold px-4 py-3">Browse</h1>
