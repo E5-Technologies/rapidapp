@@ -7,9 +7,9 @@ const BottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       {/* Camera Button - Elevated */}
-      <div className="absolute left-1/2 -translate-x-1/2 -top-12">
-        <button className="w-20 h-20 rounded-full bg-foreground flex items-center justify-center shadow-2xl hover:scale-105 transition-transform">
-          <Camera className="w-9 h-9 text-background" strokeWidth={1.5} />
+      <div className="absolute left-1/2 -translate-x-1/2 -top-6">
+        <button className="w-14 h-14 rounded-full bg-foreground flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
+          <Camera className="w-6 h-6 text-background" strokeWidth={1.5} />
         </button>
       </div>
 
