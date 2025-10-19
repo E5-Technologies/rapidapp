@@ -15,13 +15,19 @@ const GateValveIcon = ({ className }: GateValveIconProps) => {
       className={className}
     >
       {/* Left triangle */}
-      <path d="M3 12 L12 6 L12 18 Z" />
+      <path d="M4 12 L12 7 L12 17 Z" fill="none" />
       {/* Right triangle */}
-      <path d="M21 12 L12 6 L12 18 Z" />
+      <path d="M20 12 L12 7 L12 17 Z" fill="none" />
+      {/* Diagonal cross lines */}
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="12" y1="7" x2="4" y2="12" />
+      <line x1="12" y1="7" x2="20" y2="12" />
+      <line x1="12" y1="17" x2="4" y2="12" />
+      <line x1="12" y1="17" x2="20" y2="12" />
       {/* Vertical stem */}
-      <line x1="12" y1="6" x2="12" y2="2" />
-      {/* Horizontal top handle */}
-      <line x1="9" y1="2" x2="15" y2="2" />
+      <line x1="12" y1="7" x2="12" y2="3" />
+      {/* Horizontal handle */}
+      <line x1="9" y1="3" x2="15" y2="3" />
     </svg>
   );
 };
