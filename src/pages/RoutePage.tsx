@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Download, Pin, Star, X, Navigation } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
+import logo from "@/assets/rapid-logo.png";
 import ViewToggle from "@/components/ViewToggle";
 import LocationListItem from "@/components/LocationListItem";
 import BottomNav from "@/components/BottomNav";
@@ -191,7 +192,9 @@ const Route = () => {
           </div>
         </div>
         
-        <h1 className="text-2xl font-bold px-4 py-3">Location</h1>
+        <div className="flex items-center justify-center px-4 py-3">
+          <img src={logo} alt="Rapid Logo" className="h-8 w-auto" />
+        </div>
         
         <div className="py-3">
           <ViewToggle view={view} onViewChange={setView} />

@@ -1,7 +1,7 @@
 import { Camera, Filter } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
-import logo from "@/assets/logo.jpg";
+import logo from "@/assets/rapid-logo.png";
 import CategoryScroll from "@/components/CategoryScroll";
 import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
@@ -258,11 +258,9 @@ const Materials = () => {
           </div>
         </div>
         
-        <div className="flex items-center px-4 py-3">
+        <div className="flex items-center justify-center px-4 py-3">
           <img src={logo} alt="Rapid Logo" className="h-8 w-auto" />
         </div>
-        
-        <h1 className="text-2xl font-bold px-4 py-3">Browse</h1>
         
         <SearchBar
           placeholder="Search by serial or model number..." 

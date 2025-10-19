@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import logo from "@/assets/rapid-logo.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -80,7 +81,10 @@ const Settings = () => {
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold px-4 py-3">Settings</h1>
+        
+        <div className="flex items-center justify-center px-4 py-3">
+          <img src={logo} alt="Rapid Logo" className="h-8 w-auto" />
+        </div>
       </div>
 
       <div className="px-4 py-6 space-y-6">
