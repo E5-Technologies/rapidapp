@@ -1,4 +1,4 @@
-import { MapPin, Package, Star } from "lucide-react";
+import { MapPin, Package, Star, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 const BottomNav = () => {
@@ -8,6 +8,7 @@ const BottomNav = () => {
     { icon: MapPin, label: "Route", path: "/route" },
     { icon: Package, label: "Materials", path: "/" },
     { icon: Star, label: "Favorites", path: "/favorites" },
+    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
   return (
