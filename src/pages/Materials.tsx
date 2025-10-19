@@ -25,6 +25,8 @@ interface Material {
   category: string;
   title: string;
   product_name: string;
+  serial_number?: string | null;
+  model_number?: string | null;
   rating: number;
   image_url: string | null;
   datasheet_url: string | null;
@@ -45,11 +47,13 @@ const Materials = () => {
   const [identification, setIdentification] = useState<any>(null);
   const [matchedProducts, setMatchedProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
+  const [allMaterials, setAllMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSearchDialog, setShowSearchDialog] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -66,10 +70,11 @@ const Materials = () => {
           `)
           .eq('category', selectedCategory)
           .order('purchase_count', { ascending: false })
-          .limit(50);
+          .limit(200);
 
         if (error) throw error;
         
+        setAllMaterials(data || []);
         setMaterials(data || []);
         
         // Extract unique manufacturers for filter
@@ -92,10 +97,39 @@ const Materials = () => {
     fetchMaterials();
   }, [selectedCategory, toast]);
 
-  // Reset manufacturer filter when category changes
+  // Reset manufacturer filter and search when category changes
   useEffect(() => {
     setSelectedManufacturer("all");
+    setActiveSearchQuery("");
+    setSearchQuery("");
   }, [selectedCategory]);
+
+  // Apply search filter
+  useEffect(() => {
+    if (!activeSearchQuery.trim()) {
+      setMaterials(allMaterials);
+      return;
+    }
+
+    const query = activeSearchQuery.toLowerCase().trim();
+    const filtered = allMaterials.filter(material => {
+      const title = material.title?.toLowerCase() || "";
+      const productName = material.product_name?.toLowerCase() || "";
+      const serialNumber = material.serial_number?.toLowerCase() || "";
+      const modelNumber = material.model_number?.toLowerCase() || "";
+      const manufacturerName = material.manufacturer?.name?.toLowerCase() || "";
+
+      return (
+        title.includes(query) ||
+        productName.includes(query) ||
+        serialNumber.includes(query) ||
+        modelNumber.includes(query) ||
+        manufacturerName.includes(query)
+      );
+    });
+
+    setMaterials(filtered);
+  }, [activeSearchQuery, allMaterials]);
 
   // Filter materials by manufacturer
   const filteredMaterials = selectedManufacturer === "all" 
@@ -203,48 +237,17 @@ const Materials = () => {
     }
   }
 
-  async function handleSearch(query: string) {
-    if (!query.trim()) return;
+  // Handle search input with debounce
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    
+    // Debounce the search
+    const timeoutId = setTimeout(() => {
+      setActiveSearchQuery(value);
+    }, 300);
 
-    setSearchQuery(query);
-    setShowSearchDialog(true);
-    setIsSearching(true);
-    setSearchResult(null);
-
-    try {
-      // Get user location (simplified - in production, use geolocation API)
-      const userLocation = "United States"; // Default location
-
-      console.log('Searching for material:', query);
-
-      // Call edge function to search the web
-      const { data, error } = await supabase.functions.invoke('search-material', {
-        body: { 
-          query: query.trim(),
-          userLocation 
-        }
-      });
-
-      if (error) throw error;
-
-      console.log('Search result:', data);
-      setSearchResult(data);
-
-      toast({
-        title: "Search Complete",
-        description: `Found information for ${data.productName || query}`,
-      });
-    } catch (error) {
-      console.error('Error searching material:', error);
-      toast({
-        title: "Search Failed",
-        description: "Could not find material information. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSearching(false);
-    }
-  }
+    return () => clearTimeout(timeoutId);
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -266,12 +269,8 @@ const Materials = () => {
         <h1 className="text-2xl font-bold px-4 py-2">Browse</h1>
         
         <SearchBar
-          placeholder="Search by serial or model number..." 
-          onChange={(value) => {
-            if (value.trim()) {
-              handleSearch(value);
-            }
-          }}
+          placeholder="Search by description, serial, or model..." 
+          onChange={handleSearchChange}
         />
         <CategoryScroll 
           selectedCategory={selectedCategory}
@@ -301,7 +300,9 @@ const Materials = () => {
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
         ) : filteredMaterials.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">No materials found.</div>
+          <div className="text-center py-8 text-muted-foreground">
+            {activeSearchQuery ? `No materials found for "${activeSearchQuery}"` : "No materials found."}
+          </div>
         ) : (
           // Group materials by manufacturer
           Object.entries(

@@ -47,9 +47,11 @@ export type Database = {
           image_url: string | null
           last_updated: string
           manufacturer_id: string
+          model_number: string | null
           product_name: string
           purchase_count: number
           rating: number
+          serial_number: string | null
           title: string
         }
         Insert: {
@@ -60,9 +62,11 @@ export type Database = {
           image_url?: string | null
           last_updated?: string
           manufacturer_id: string
+          model_number?: string | null
           product_name: string
           purchase_count?: number
           rating?: number
+          serial_number?: string | null
           title: string
         }
         Update: {
@@ -73,9 +77,11 @@ export type Database = {
           image_url?: string | null
           last_updated?: string
           manufacturer_id?: string
+          model_number?: string | null
           product_name?: string
           purchase_count?: number
           rating?: number
+          serial_number?: string | null
           title?: string
         }
         Relationships: [
