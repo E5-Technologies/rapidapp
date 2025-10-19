@@ -1,7 +1,6 @@
 import { Download } from "lucide-react";
 import LocationListItem from "@/components/LocationListItem";
 import BottomNav from "@/components/BottomNav";
-import logo from "@/assets/rapid-logo-new.png";
 
 
 const Favorites = () => {
@@ -26,10 +25,6 @@ const Favorites = () => {
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
           </div>
-        </div>
-        
-        <div className="flex items-center justify-center px-4 py-2">
-          <img src={logo} alt="Rapid Logo" className="h-12 w-auto" />
         </div>
         
         <h1 className="text-2xl font-bold px-4 py-3">Favorites</h1>
