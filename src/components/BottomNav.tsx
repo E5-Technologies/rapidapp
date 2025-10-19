@@ -1,13 +1,35 @@
 import { Camera } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const BottomNav = () => {
   const location = useLocation();
+  const [isScrolling, setIsScrolling] = useState(false);
+
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      setIsScrolling(true);
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        setIsScrolling(false);
+      }, 150);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       {/* Camera Button - Elevated */}
-      <div className="absolute left-1/2 -translate-x-1/2 -top-6">
+      <div className={`absolute left-1/2 -translate-x-1/2 -top-6 transition-all duration-300 ${
+        isScrolling ? "opacity-0 scale-75 pointer-events-none" : "opacity-100 scale-100"
+      }`}>
         <button className="w-14 h-14 rounded-full bg-foreground flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
           <Camera className="w-6 h-6 text-background" strokeWidth={1.5} />
         </button>
