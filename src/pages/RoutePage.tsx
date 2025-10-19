@@ -118,7 +118,7 @@ const Route = () => {
   // Filter locations based on search query
   useEffect(() => {
     if (searchQuery.trim() === "") {
-      setFilteredLocations(allLocations);
+      setFilteredLocations([]);
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = allLocations.filter(
@@ -312,7 +312,12 @@ const Route = () => {
         </div>
       ) : (
         <div className="bg-card max-h-[calc(100vh-240px)] overflow-y-auto">
-          {filteredLocations.length > 0 ? (
+          {searchQuery.trim() === "" ? (
+            <div className="p-12 text-center">
+              <p className="text-muted-foreground text-lg">Start searching to find wells</p>
+              <p className="text-sm text-muted-foreground mt-2">Search by well name, operator, or field</p>
+            </div>
+          ) : filteredLocations.length > 0 ? (
             filteredLocations.map((location, index) => (
               <div key={index} onClick={() => handleLocationSelect(location)}>
                 <LocationListItem 
