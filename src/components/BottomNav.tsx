@@ -26,15 +26,15 @@ const BottomNav = () => {
             viewBox="0 0 24 24" 
             fill="none" 
             stroke="currentColor" 
-            strokeWidth="2.5" 
+            strokeWidth="2" 
             strokeLinecap="round" 
             strokeLinejoin="round"
             className="w-7 h-7"
           >
-            {/* Road/Navigation icon */}
-            <path d="M3 18 L9 6 L15 18 L21 6" strokeWidth="2.5" />
-            <circle cx="9" cy="6" r="1.5" fill="currentColor" />
-            <circle cx="15" cy="18" r="1.5" fill="currentColor" />
+            {/* Folded map icon */}
+            <path d="M9 18V6l-5 3v12l5-3z" />
+            <path d="M9 6l6-3v12l-6 3V6z" />
+            <path d="M15 3v12l5-3V0l-5 3z" />
           </svg>
           <span className="text-xs font-semibold">Route</span>
         </Link>
