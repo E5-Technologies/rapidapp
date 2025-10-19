@@ -14,7 +14,7 @@ const BottomNav = () => {
       clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(() => {
         setIsScrolling(false);
-      }, 150);
+      }, 100);
     };
 
     window.addEventListener("scroll", handleScroll);
