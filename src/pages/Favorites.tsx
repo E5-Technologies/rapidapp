@@ -1,7 +1,8 @@
-import { Download } from "lucide-react";
+import { Download, Settings } from "lucide-react";
 import LocationListItem from "@/components/LocationListItem";
 import BottomNav from "@/components/BottomNav";
 import logo from "@/assets/rapid-logo.png";
+import { Link } from "react-router-dom";
 
 
 const Favorites = () => {
@@ -21,10 +22,15 @@ const Favorites = () => {
       <div className="sticky top-0 bg-background z-10 pt-2">
         <div className="flex items-center justify-between px-4 py-2">
           <span className="text-sm font-medium">9:41</span>
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
-            <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
-            <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
+          <div className="flex items-center gap-3">
+            <Link to="/settings">
+              <Settings className="w-5 h-5 text-foreground hover:text-primary transition-colors" />
+            </Link>
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
+              <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
+              <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
+            </div>
           </div>
         </div>
         
