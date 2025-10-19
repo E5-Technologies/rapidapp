@@ -1,7 +1,7 @@
 import { Camera, Filter } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
-import logo from "@/assets/rapid-logo.png";
+
 import CategoryScroll from "@/components/CategoryScroll";
 import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
@@ -256,10 +256,6 @@ const Materials = () => {
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
             <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
           </div>
-        </div>
-        
-        <div className="flex items-center px-4 py-1">
-          <img src={logo} alt="Rapid Logo" className="h-24 w-auto" />
         </div>
         
         <h1 className="text-2xl font-bold px-4 py-3">Browse</h1>
