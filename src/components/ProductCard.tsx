@@ -17,7 +17,7 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet }
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <img src={logo} alt={company} className="w-5 h-5 object-contain" />
+            <img src={logo} alt={company} className="w-10 h-10 object-contain" />
             <h3 className="font-bold text-sm">{company}</h3>
           </div>
         </div>
