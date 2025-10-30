@@ -15,6 +15,7 @@ interface SearchBarProps {
   onChange?: (value: string) => void;
   suggestions?: Suggestion[];
   onSuggestionSelect?: (suggestion: Suggestion) => void;
+  onEnterPress?: () => void;
   value?: string;
 }
 
@@ -24,6 +25,7 @@ const SearchBar = ({
   onChange, 
   suggestions = [],
   onSuggestionSelect,
+  onEnterPress,
   value = ""
 }: SearchBarProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -51,9 +53,10 @@ const SearchBar = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && suggestions.length > 0) {
+    if (e.key === 'Enter') {
       e.preventDefault();
-      handleSuggestionClick(suggestions[0]);
+      setShowSuggestions(false);
+      onEnterPress?.();
     }
   };
 

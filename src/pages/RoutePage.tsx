@@ -116,18 +116,43 @@ const Route = () => {
     }
   }, [toast]);
 
-  // Filter locations based on search query
+  // Filter locations based on search query with fuzzy matching
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setFilteredLocations([]);
     } else {
       const query = searchQuery.toLowerCase();
-      const filtered = allLocations.filter(
+      
+      // First pass: exact and partial matches
+      let filtered = allLocations.filter(
         (location) =>
           location.name.toLowerCase().includes(query) ||
           location.operator?.toLowerCase().includes(query) ||
           location.field?.toLowerCase().includes(query)
       );
+      
+      // If we have fewer than 10 results, add similar matches
+      if (filtered.length < 10) {
+        const words = query.split(/\s+/);
+        const similarMatches = allLocations.filter(location => {
+          // Skip if already in filtered results
+          if (filtered.some(f => f.name === location.name)) return false;
+          
+          // Check if any search word partially matches any part of the location data
+          return words.some(word => 
+            word.length > 2 && (
+              location.name.toLowerCase().includes(word) ||
+              location.operator?.toLowerCase().includes(word) ||
+              location.field?.toLowerCase().includes(word) ||
+              location.type.toLowerCase().includes(word)
+            )
+          );
+        });
+        
+        // Combine and limit to reasonable number
+        filtered = [...filtered, ...similarMatches].slice(0, 20);
+      }
+      
       setFilteredLocations(filtered);
     }
   }, [searchQuery]);
@@ -181,6 +206,13 @@ const Route = () => {
     }
   };
 
+  const handleSearchEnter = () => {
+    // Switch to list view to show suggestions when Enter is pressed
+    if (searchQuery.trim() !== "") {
+      setView("list");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -214,6 +246,7 @@ const Route = () => {
           onChange={(value) => setSearchQuery(value)}
           suggestions={filteredLocations}
           onSuggestionSelect={handleLocationSelect}
+          onEnterPress={handleSearchEnter}
           value={searchQuery}
         />
       </div>
