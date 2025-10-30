@@ -27,6 +27,7 @@ const Route = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isRouting, setIsRouting] = useState(false);
+  const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
   const { toast } = useToast();
 
   // Comprehensive oil and gas well database with coordinates
@@ -181,26 +182,30 @@ const Route = () => {
       return;
     }
 
-    setIsRouting(true);
-    const distance = calculateDistance(
-      userLocation.lat,
-      userLocation.lng,
-      selectedLocation.lat,
-      selectedLocation.lng
-    );
+    setIsRouting(!isRouting);
+    
+    if (!isRouting) {
+      toast({
+        title: "Route Started",
+        description: `Calculating route to ${selectedLocation.name}`,
+      });
+    } else {
+      setRouteInfo(null);
+      toast({
+        title: "Route Ended",
+        description: "Navigation cancelled",
+      });
+    }
+  };
 
-    toast({
-      title: "Route Started",
-      description: `Navigating to ${selectedLocation.name} (${distance.toFixed(1)} miles away)`,
-    });
-
-    // Open in Google Maps for actual navigation
-    const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${selectedLocation.lat},${selectedLocation.lng}&travelmode=driving`;
-    window.open(mapsUrl, "_blank");
+  const handleRouteCalculated = (distance: number, duration: number) => {
+    setRouteInfo({ distance, duration });
   };
 
   const handleLocationSelect = (location: WellLocation) => {
     setSelectedLocation(location);
+    setIsRouting(false);
+    setRouteInfo(null);
     if (view === "list") {
       setView("map");
     }
@@ -259,6 +264,8 @@ const Route = () => {
             <InteractiveMap 
               userLocation={userLocation}
               selectedLocation={selectedLocation}
+              isRouting={isRouting}
+              onRouteCalculated={handleRouteCalculated}
             />
 
             {/* Search Results Indicator */}
@@ -303,7 +310,16 @@ const Route = () => {
                   </p>
                 )}
                 
-                {userLocation && (
+                {routeInfo ? (
+                  <div className="bg-muted/50 rounded-lg p-2 mb-4">
+                    <p className="text-xs font-medium">
+                      Distance: {routeInfo.distance.toFixed(1)} miles
+                    </p>
+                    <p className="text-xs font-medium">
+                      Duration: {Math.round(routeInfo.duration)} min
+                    </p>
+                  </div>
+                ) : userLocation && (
                   <div className="bg-muted/50 rounded-lg p-2 mb-4">
                     <p className="text-xs font-medium">
                       Distance: {calculateDistance(
@@ -311,7 +327,7 @@ const Route = () => {
                         userLocation.lng,
                         selectedLocation.lat,
                         selectedLocation.lng
-                      ).toFixed(1)} miles
+                      ).toFixed(1)} miles (straight line)
                     </p>
                   </div>
                 )}
@@ -343,10 +359,11 @@ const Route = () => {
               <Button 
                 onClick={handleStartRoute}
                 disabled={!userLocation}
+                variant={isRouting ? "destructive" : "default"}
                 className="w-full rounded-full h-12 text-base font-semibold"
               >
                 <Navigation className="w-5 h-5 mr-2" />
-                {isRouting ? "Navigate in Maps" : "Start Route"}
+                {isRouting ? "End Route" : "Start Route"}
               </Button>
             </div>
           )}

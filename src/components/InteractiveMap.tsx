@@ -8,13 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 interface InteractiveMapProps {
   userLocation: { lat: number; lng: number } | null;
   selectedLocation?: { lat: number; lng: number; name: string } | null;
+  isRouting?: boolean;
+  onRouteCalculated?: (distance: number, duration: number) => void;
 }
 
-const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps) => {
+const InteractiveMap = ({ userLocation, selectedLocation, isRouting = false, onRouteCalculated }: InteractiveMapProps) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const userMarker = useRef<mapboxgl.Marker | null>(null);
   const locationMarker = useRef<mapboxgl.Marker | null>(null);
+  const routeLayerId = useRef<string>('route-layer');
   const [tokenInput, setTokenInput] = useState('');
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [needsToken, setNeedsToken] = useState(false);
@@ -124,6 +127,85 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
     };
   }, [userLocation, mapboxToken]);
 
+  // Fetch and display route
+  useEffect(() => {
+    if (!map.current || !mapboxToken || !isRouting || !userLocation || !selectedLocation) {
+      // Remove route if not routing
+      if (map.current && map.current.getLayer(routeLayerId.current)) {
+        map.current.removeLayer(routeLayerId.current);
+        map.current.removeSource(routeLayerId.current);
+      }
+      return;
+    }
+
+    const fetchRoute = async () => {
+      try {
+        const query = `https://api.mapbox.com/directions/v5/mapbox/driving/${userLocation.lng},${userLocation.lat};${selectedLocation.lng},${selectedLocation.lat}?geometries=geojson&overview=full&steps=true&access_token=${mapboxToken}`;
+        
+        const response = await fetch(query);
+        const data = await response.json();
+
+        if (data.routes && data.routes.length > 0) {
+          const route = data.routes[0];
+          const distance = route.distance / 1609.34; // Convert meters to miles
+          const duration = route.duration / 60; // Convert seconds to minutes
+
+          // Notify parent component
+          onRouteCalculated?.(distance, duration);
+
+          // Remove existing route layer if it exists
+          if (map.current!.getLayer(routeLayerId.current)) {
+            map.current!.removeLayer(routeLayerId.current);
+            map.current!.removeSource(routeLayerId.current);
+          }
+
+          // Add route to map
+          map.current!.addSource(routeLayerId.current, {
+            type: 'geojson',
+            data: {
+              type: 'Feature',
+              properties: {},
+              geometry: route.geometry,
+            },
+          });
+
+          map.current!.addLayer({
+            id: routeLayerId.current,
+            type: 'line',
+            source: routeLayerId.current,
+            layout: {
+              'line-join': 'round',
+              'line-cap': 'round',
+            },
+            paint: {
+              'line-color': '#3b82f6',
+              'line-width': 5,
+              'line-opacity': 0.8,
+            },
+          });
+
+          // Fit map to show entire route
+          const coordinates = route.geometry.coordinates;
+          const bounds = coordinates.reduce(
+            (bounds: mapboxgl.LngLatBounds, coord: [number, number]) => {
+              return bounds.extend(coord as [number, number]);
+            },
+            new mapboxgl.LngLatBounds(coordinates[0], coordinates[0])
+          );
+
+          map.current!.fitBounds(bounds, {
+            padding: { top: 100, bottom: 100, left: 50, right: 50 },
+            duration: 1500,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching route:', error);
+      }
+    };
+
+    fetchRoute();
+  }, [isRouting, userLocation, selectedLocation, mapboxToken, onRouteCalculated]);
+
   // Update selected location marker
   useEffect(() => {
     if (!map.current) return;
@@ -150,14 +232,16 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
         .setLngLat([selectedLocation.lng, selectedLocation.lat])
         .addTo(map.current);
 
-      // Fly to selected location
-      map.current.flyTo({
-        center: [selectedLocation.lng, selectedLocation.lat],
-        zoom: 14,
-        pitch: 45,
-        duration: 2000,
-      });
-    } else if (userLocation) {
+      // Only fly to location if not routing (routing will fit bounds)
+      if (!isRouting) {
+        map.current.flyTo({
+          center: [selectedLocation.lng, selectedLocation.lat],
+          zoom: 14,
+          pitch: 45,
+          duration: 2000,
+        });
+      }
+    } else if (userLocation && !isRouting) {
       // Fly back to user location
       map.current.flyTo({
         center: [userLocation.lng, userLocation.lat],
@@ -166,7 +250,7 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
         duration: 2000,
       });
     }
-  }, [selectedLocation, userLocation]);
+  }, [selectedLocation, userLocation, isRouting]);
 
   if (isLoadingToken) {
     return (
