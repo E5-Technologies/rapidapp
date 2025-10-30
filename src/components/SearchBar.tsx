@@ -50,6 +50,13 @@ const SearchBar = ({
     setShowSuggestions(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && suggestions.length > 0) {
+      e.preventDefault();
+      handleSuggestionClick(suggestions[0]);
+    }
+  };
+
   return (
     <div className="flex items-center gap-2 px-4 py-3" ref={wrapperRef}>
       <div className="relative flex-1">
@@ -58,6 +65,7 @@ const SearchBar = ({
           placeholder={placeholder}
           className="pl-10 rounded-full bg-input border-0 h-11"
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           value={value}
           onFocus={() => value.trim().length > 0 && setShowSuggestions(true)}
         />
