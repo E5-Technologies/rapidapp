@@ -18,21 +18,58 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
   const [tokenInput, setTokenInput] = useState('');
   const [mapboxToken, setMapboxToken] = useState<string | null>(null);
   const [needsToken, setNeedsToken] = useState(false);
+  const [isLoadingToken, setIsLoadingToken] = useState(true);
 
-  // Check for token on mount
+  // Fetch token from backend on mount
   useEffect(() => {
-    const envToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
-    if (envToken && envToken !== '${MAPBOX_PUBLIC_TOKEN}' && !envToken.startsWith('${')) {
-      setMapboxToken(envToken);
-    } else {
-      // Check localStorage for saved token
-      const savedToken = localStorage.getItem('mapbox_token');
-      if (savedToken) {
-        setMapboxToken(savedToken);
-      } else {
-        setNeedsToken(true);
+    const fetchToken = async () => {
+      try {
+        // First check environment variable
+        const envToken = import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN;
+        if (envToken && envToken !== '${MAPBOX_PUBLIC_TOKEN}' && !envToken.startsWith('${')) {
+          setMapboxToken(envToken);
+          setIsLoadingToken(false);
+          return;
+        }
+
+        // Fetch from backend
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-mapbox-token`, {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.token) {
+            setMapboxToken(data.token);
+            setIsLoadingToken(false);
+            return;
+          }
+        }
+
+        // Fallback to localStorage if backend fails
+        const savedToken = localStorage.getItem('mapbox_token');
+        if (savedToken) {
+          setMapboxToken(savedToken);
+        } else {
+          setNeedsToken(true);
+        }
+      } catch (error) {
+        console.error('Error fetching mapbox token:', error);
+        // Fallback to localStorage on error
+        const savedToken = localStorage.getItem('mapbox_token');
+        if (savedToken) {
+          setMapboxToken(savedToken);
+        } else {
+          setNeedsToken(true);
+        }
+      } finally {
+        setIsLoadingToken(false);
       }
-    }
+    };
+
+    fetchToken();
   }, []);
 
   const handleTokenSubmit = () => {
@@ -130,6 +167,14 @@ const InteractiveMap = ({ userLocation, selectedLocation }: InteractiveMapProps)
       });
     }
   }, [selectedLocation, userLocation]);
+
+  if (isLoadingToken) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <p className="text-muted-foreground">Loading map...</p>
+      </div>
+    );
+  }
 
   if (needsToken) {
     return (
