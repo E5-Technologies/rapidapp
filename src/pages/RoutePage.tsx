@@ -365,6 +365,8 @@ const Route = () => {
                   name={location.name}
                   status={location.name === selectedLocation?.name ? "routing" : undefined}
                   type={location.type}
+                  operator={location.operator}
+                  field={location.field}
                 />
               </div>
             ))
