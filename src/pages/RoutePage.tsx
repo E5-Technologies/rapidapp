@@ -212,6 +212,9 @@ const Route = () => {
           placeholder="Search wells, operators, or fields..." 
           onFilterClick={() => {}}
           onChange={(value) => setSearchQuery(value)}
+          suggestions={filteredLocations}
+          onSuggestionSelect={handleLocationSelect}
+          value={searchQuery}
         />
       </div>
 
