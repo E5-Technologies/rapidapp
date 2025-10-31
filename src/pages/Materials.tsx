@@ -317,33 +317,20 @@ const Materials = () => {
             {activeSearchQuery ? `No materials found for "${activeSearchQuery}"` : "No materials found."}
           </div>
         ) : (
-          // Group materials by manufacturer
-          Object.entries(
-            filteredMaterials.reduce((acc, material) => {
-              const manufacturerName = material.manufacturer?.name || 'Unknown';
-              if (!acc[manufacturerName]) {
-                acc[manufacturerName] = [];
-              }
-              acc[manufacturerName].push(material);
-              return acc;
-            }, {} as Record<string, Material[]>)
-          ).map(([manufacturerName, manufacturerMaterials]) => (
-            <div key={manufacturerName} className="space-y-4">
-                {manufacturerMaterials.map((material) => (
-                  <ProductCard
-                    key={material.id}
-                    company={material.manufacturer?.name || 'Unknown'}
-                    logo={material.manufacturer?.logo_url || ''}
-                    title={material.title}
-                    product={material.product_name}
-                    rating={material.rating}
-                    image={material.image_url || ''}
-                    dataSheet={material.datasheet_url}
-                    manufacturerId={material.manufacturer_id}
-                    onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
-                  />
-                ))}
-            </div>
+          // Materials ranked by popularity (purchase_count)
+          filteredMaterials.map((material) => (
+            <ProductCard
+              key={material.id}
+              company={material.manufacturer?.name || 'Unknown'}
+              logo={material.manufacturer?.logo_url || ''}
+              title={material.title}
+              product={material.product_name}
+              rating={material.rating}
+              image={material.image_url || ''}
+              dataSheet={material.datasheet_url}
+              manufacturerId={material.manufacturer_id}
+              onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
+            />
           ))
         )}
       </div>
