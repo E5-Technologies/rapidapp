@@ -35,13 +35,12 @@ const Route = () => {
   const [allLocations, setAllLocations] = useState<WellLocation[]>([
     // Default/legacy locations
     { name: "Permian HZ-1", type: "other", lat: 31.8457, lng: -102.3676, operator: "ExxonMobil", field: "Permian Basin" },
-    { name: "Permian HZ-2", type: "other", lat: 31.8523, lng: -102.3821, operator: "Chevron", field: "Permian Basin" },
-    { name: "Wolfcamp A-15", type: "other", lat: 31.9234, lng: -102.4567, operator: "Pioneer Natural", field: "Midland Basin" },
-    { name: "Spraberry 44-7H", type: "other", lat: 31.7654, lng: -102.2345, operator: "Diamondback", field: "Spraberry" },
-    { name: "Delaware Basin #3", type: "other", lat: 32.0123, lng: -103.5678, operator: "Occidental", field: "Delaware Basin" },
     { name: "Eagle Ford 1H", type: "other", lat: 28.4234, lng: -98.4567, operator: "EOG Resources", field: "Eagle Ford" },
     { name: "Bakken Unit 1-15H", type: "other", lat: 47.7589, lng: -103.2314, operator: "Continental", field: "Bakken" },
     { name: "Red Tank 19 CTB", type: "tank", lat: 31.7234, lng: -102.5678, operator: "Devon Energy", field: "Permian Basin" },
+    // DrillingEdge wells - searchable by API number
+    { name: "SAND DUNES 36 STATE COM 001 (30-015-30643)", type: "other", lat: 32.4237, lng: -104.2294, operator: "Unknown", field: "Eddy County, NM" },
+    { name: "AIRSTREAM 24 STATE COM 301H (30-025-53702)", type: "other", lat: 32.7023, lng: -103.3441, operator: "Permian Resources Operating, LLC", field: "Lea County, NM" },
   ]);
 
   const [filteredLocations, setFilteredLocations] = useState<WellLocation[]>([]);
