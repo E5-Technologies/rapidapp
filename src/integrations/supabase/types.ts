@@ -123,6 +123,44 @@ export type Database = {
           },
         ]
       }
+      sales_contacts: {
+        Row: {
+          contact_name: string | null
+          created_at: string
+          email: string
+          id: string
+          manufacturer_id: string
+          phone: string
+          region: string
+        }
+        Insert: {
+          contact_name?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          manufacturer_id: string
+          phone: string
+          region: string
+        }
+        Update: {
+          contact_name?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          manufacturer_id?: string
+          phone?: string
+          region?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_contacts_manufacturer_id_fkey"
+            columns: ["manufacturer_id"]
+            isOneToOne: false
+            referencedRelation: "manufacturers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

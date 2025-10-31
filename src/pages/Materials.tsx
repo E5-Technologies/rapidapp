@@ -9,6 +9,7 @@ import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
 import MaterialIdentificationDialog from "@/components/MaterialIdentificationDialog";
 import MaterialSearchDialog from "@/components/MaterialSearchDialog";
+import SalesContactDialog from "@/components/SalesContactDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -55,6 +56,8 @@ const Materials = () => {
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [selectedManufacturerForContact, setSelectedManufacturerForContact] = useState<{ id: string; name: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -250,6 +253,11 @@ const Materials = () => {
     return () => clearTimeout(timeoutId);
   };
 
+  const handleContactClick = (manufacturerId: string, manufacturerName: string) => {
+    setSelectedManufacturerForContact({ id: manufacturerId, name: manufacturerName });
+    setShowContactDialog(true);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Header */}
@@ -331,6 +339,8 @@ const Materials = () => {
                     rating={material.rating}
                     image={material.image_url || ''}
                     dataSheet={material.datasheet_url}
+                    manufacturerId={material.manufacturer_id}
+                    onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
                   />
                 ))}
             </div>
@@ -361,6 +371,14 @@ const Materials = () => {
         onOpenChange={setShowSearchDialog}
         isSearching={isSearching}
         searchResult={searchResult}
+      />
+
+      <SalesContactDialog
+        open={showContactDialog}
+        onOpenChange={setShowContactDialog}
+        manufacturerId={selectedManufacturerForContact?.id || ''}
+        manufacturerName={selectedManufacturerForContact?.name || ''}
+        userRegion="Gulf Coast"
       />
 
       <BottomNav />
