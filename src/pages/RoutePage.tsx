@@ -10,6 +10,7 @@ import BottomNav from "@/components/BottomNav";
 import InteractiveMap from "@/components/InteractiveMap";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WellLocation {
   name: string;
@@ -31,64 +32,65 @@ const Route = () => {
   const { toast } = useToast();
 
   // Comprehensive oil and gas well database with coordinates
-  const allLocations: WellLocation[] = [
-    // Permian Basin - Texas
+  const [allLocations, setAllLocations] = useState<WellLocation[]>([
+    // Default/legacy locations
     { name: "Permian HZ-1", type: "other", lat: 31.8457, lng: -102.3676, operator: "ExxonMobil", field: "Permian Basin" },
     { name: "Permian HZ-2", type: "other", lat: 31.8523, lng: -102.3821, operator: "Chevron", field: "Permian Basin" },
     { name: "Wolfcamp A-15", type: "other", lat: 31.9234, lng: -102.4567, operator: "Pioneer Natural", field: "Midland Basin" },
     { name: "Spraberry 44-7H", type: "other", lat: 31.7654, lng: -102.2345, operator: "Diamondback", field: "Spraberry" },
     { name: "Delaware Basin #3", type: "other", lat: 32.0123, lng: -103.5678, operator: "Occidental", field: "Delaware Basin" },
-    
-    // Eagle Ford Shale - Texas
     { name: "Eagle Ford 1H", type: "other", lat: 28.4234, lng: -98.4567, operator: "EOG Resources", field: "Eagle Ford" },
-    { name: "Eagle Ford 2H", type: "other", lat: 28.5678, lng: -98.3456, operator: "ConocoPhillips", field: "Eagle Ford" },
-    { name: "Karnes County #12", type: "other", lat: 28.8901, lng: -97.8765, operator: "Marathon Oil", field: "Eagle Ford" },
-    
-    // Bakken Formation - North Dakota
     { name: "Bakken Unit 1-15H", type: "other", lat: 47.7589, lng: -103.2314, operator: "Continental", field: "Bakken" },
-    { name: "Bakken TF-152H", type: "other", lat: 47.8234, lng: -103.4567, operator: "Whiting Petroleum", field: "Bakken" },
-    { name: "Three Forks 44-3H", type: "other", lat: 48.0123, lng: -103.6789, operator: "Hess", field: "Three Forks" },
-    { name: "Mountrail 156-94", type: "other", lat: 48.1234, lng: -102.8901, operator: "Oasis Petroleum", field: "Bakken" },
-    
-    // DJ Basin - Colorado
-    { name: "Wattenberg 32-14", type: "other", lat: 40.2345, lng: -104.6789, operator: "PDC Energy", field: "Wattenberg" },
-    { name: "Niobrara A-21H", type: "other", lat: 40.1234, lng: -104.5678, operator: "Civitas", field: "DJ Basin" },
-    { name: "Codell 15-22", type: "other", lat: 40.3456, lng: -104.7890, operator: "Occidental", field: "DJ Basin" },
-    
-    // Haynesville Shale - Louisiana
-    { name: "Haynesville 1H", type: "other", lat: 32.5234, lng: -93.8765, operator: "Chesapeake", field: "Haynesville" },
-    { name: "Cotton Valley #8", type: "other", lat: 32.4567, lng: -93.9876, operator: "Encana", field: "Haynesville" },
-    
-    // Marcellus Shale - Pennsylvania
-    { name: "Marcellus 4H", type: "other", lat: 41.7654, lng: -77.8901, operator: "Range Resources", field: "Marcellus" },
-    { name: "Marcellus 7H", type: "other", lat: 41.8765, lng: -77.7890, operator: "EQT Corporation", field: "Marcellus" },
-    
-    // Tank Batteries
-    { name: "Permian Central TB", type: "tank", lat: 31.9567, lng: -102.4321, operator: "Devon Energy", field: "Permian Basin" },
-    { name: "Midland Basin TB-1", type: "tank", lat: 31.8890, lng: -102.1234, operator: "Pioneer Natural", field: "Midland Basin" },
-    { name: "Spraberry Tank Battery", type: "tank", lat: 31.8123, lng: -102.3567, operator: "Diamondback", field: "Spraberry" },
-    { name: "Delaware TB-5", type: "tank", lat: 32.0456, lng: -103.4567, operator: "Occidental", field: "Delaware Basin" },
-    { name: "Eagle Ford Tank Battery", type: "tank", lat: 28.5123, lng: -98.2345, operator: "EOG Resources", field: "Eagle Ford" },
-    { name: "Bakken Central TB", type: "tank", lat: 47.8901, lng: -103.3456, operator: "Continental", field: "Bakken" },
-    { name: "Wattenberg TB-2", type: "tank", lat: 40.1890, lng: -104.6234, operator: "PDC Energy", field: "Wattenberg" },
-    { name: "Haynesville Tank Battery", type: "tank", lat: 32.4890, lng: -93.9234, operator: "Chesapeake", field: "Haynesville" },
-    { name: "Marcellus TB-3", type: "tank", lat: 41.8234, lng: -77.8345, operator: "Range Resources", field: "Marcellus" },
-    
-    // Legacy locations with updated coordinates
     { name: "Red Tank 19 CTB", type: "tank", lat: 31.7234, lng: -102.5678, operator: "Devon Energy", field: "Permian Basin" },
-    { name: "Red Tank 19 CGL", type: "tank", lat: 31.7345, lng: -102.5789, operator: "Devon Energy", field: "Permian Basin" },
-    { name: "Lost Tank 5 Fed 3", type: "fed", lat: 31.8456, lng: -102.6890, operator: "Devon Energy", field: "Permian Basin" },
-    { name: "Lost Tank 5 Fed 2", type: "fed", lat: 31.8567, lng: -102.6901, operator: "Devon Energy", field: "Permian Basin" },
-    { name: "Lost Tank 5 Fed 1", type: "fed", lat: 31.8678, lng: -102.7012, operator: "Devon Energy", field: "Permian Basin" },
-    { name: "Avogato 19 Fed 2", type: "fed", lat: 31.9789, lng: -102.8123, operator: "Apache", field: "Permian Basin" },
-    { name: "Avogato 19 Fed 1", type: "fed", lat: 31.9890, lng: -102.8234, operator: "Apache", field: "Permian Basin" },
-    { name: "Headchog 56 CTB", type: "tank", lat: 32.0901, lng: -102.9345, operator: "Apache", field: "Permian Basin" },
-    { name: "Headchog 56 Fed 3", type: "fed", lat: 32.1012, lng: -102.9456, operator: "Apache", field: "Permian Basin" },
-    { name: "Headchog 56 Fed 2", type: "fed", lat: 32.1123, lng: -102.9567, operator: "Apache", field: "Permian Basin" },
-    { name: "Headchog 56 Fed 1", type: "fed", lat: 32.1234, lng: -102.9678, operator: "Apache", field: "Permian Basin" },
-  ];
+  ]);
 
-  const [filteredLocations, setFilteredLocations] = useState<WellLocation[]>(allLocations);
+  const [filteredLocations, setFilteredLocations] = useState<WellLocation[]>([]);
+  const [isLoadingWells, setIsLoadingWells] = useState(false);
+
+  // Fetch well data from DrillingEdge on component mount
+  useEffect(() => {
+    const fetchWellData = async () => {
+      setIsLoadingWells(true);
+      try {
+        console.log('Fetching well data from DrillingEdge...');
+        const { data, error } = await supabase.functions.invoke('fetch-well-data');
+        
+        if (error) {
+          console.error('Error fetching well data:', error);
+          toast({
+            title: "Well Data Error",
+            description: "Could not fetch live well data. Using default locations.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (data?.success && data.wells) {
+          const externalWells: WellLocation[] = data.wells.map((well: any) => ({
+            name: well.name,
+            type: "other" as const,
+            lat: well.lat,
+            lng: well.lng,
+            operator: well.operator,
+            field: well.location,
+          }));
+          
+          setAllLocations(prev => [...prev, ...externalWells]);
+          console.log(`Loaded ${externalWells.length} wells from DrillingEdge`);
+          toast({
+            title: "Well Data Loaded",
+            description: `Successfully loaded ${externalWells.length} wells from DrillingEdge`,
+          });
+        }
+      } catch (err) {
+        console.error('Error:', err);
+      } finally {
+        setIsLoadingWells(false);
+      }
+    };
+
+    fetchWellData();
+  }, [toast]);
 
   // Get user's current location
   useEffect(() => {

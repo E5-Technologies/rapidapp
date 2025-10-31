@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.search-material]
 verify_jwt = false
+
+[functions.fetch-well-data]
+verify_jwt = false
