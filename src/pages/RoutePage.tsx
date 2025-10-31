@@ -32,16 +32,7 @@ const Route = () => {
   const { toast } = useToast();
 
   // Comprehensive oil and gas well database with coordinates
-  const [allLocations, setAllLocations] = useState<WellLocation[]>([
-    // Default/legacy locations
-    { name: "Permian HZ-1", type: "other", lat: 31.8457, lng: -102.3676, operator: "ExxonMobil", field: "Permian Basin" },
-    { name: "Eagle Ford 1H", type: "other", lat: 28.4234, lng: -98.4567, operator: "EOG Resources", field: "Eagle Ford" },
-    { name: "Bakken Unit 1-15H", type: "other", lat: 47.7589, lng: -103.2314, operator: "Continental", field: "Bakken" },
-    { name: "Red Tank 19 CTB", type: "tank", lat: 31.7234, lng: -102.5678, operator: "Devon Energy", field: "Permian Basin" },
-    // DrillingEdge wells - searchable by API number
-    { name: "SAND DUNES 36 STATE COM 001 (30-015-30643)", type: "other", lat: 32.4237, lng: -104.2294, operator: "Unknown", field: "Eddy County, NM" },
-    { name: "AIRSTREAM 24 STATE COM 301H (30-025-53702)", type: "other", lat: 32.7023, lng: -103.3441, operator: "Permian Resources Operating, LLC", field: "Lea County, NM" },
-  ]);
+  const [allLocations, setAllLocations] = useState<WellLocation[]>([]);
 
   const [filteredLocations, setFilteredLocations] = useState<WellLocation[]>([]);
   const [isLoadingWells, setIsLoadingWells] = useState(false);
@@ -58,15 +49,16 @@ const Route = () => {
           console.error('Error fetching well data:', error);
           toast({
             title: "Well Data Error",
-            description: "Could not fetch live well data. Using default locations.",
+            description: "Could not fetch well data. Please try again.",
             variant: "destructive",
           });
+          setIsLoadingWells(false);
           return;
         }
 
         if (data?.success && data.wells) {
           const externalWells: WellLocation[] = data.wells.map((well: any) => ({
-            name: well.name,
+            name: `${well.name} (API: ${well.apiNumber})`,
             type: "other" as const,
             lat: well.lat,
             lng: well.lng,
@@ -74,15 +66,20 @@ const Route = () => {
             field: well.location,
           }));
           
-          setAllLocations(prev => [...prev, ...externalWells]);
+          setAllLocations(externalWells);
           console.log(`Loaded ${externalWells.length} wells from DrillingEdge`);
           toast({
             title: "Well Data Loaded",
-            description: `Successfully loaded ${externalWells.length} wells from DrillingEdge`,
+            description: `Loaded ${externalWells.length} wells and leases`,
           });
         }
       } catch (err) {
         console.error('Error:', err);
+        toast({
+          title: "Loading Error",
+          description: "Failed to load well data",
+          variant: "destructive",
+        });
       } finally {
         setIsLoadingWells(false);
       }
