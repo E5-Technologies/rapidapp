@@ -291,7 +291,7 @@ const Route = () => {
           {selectedLocation && isRouting && routeInfo && (
             <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
               <DrawerTrigger asChild>
-                <div className="absolute bottom-28 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl cursor-pointer hover:shadow-xl transition-shadow">
+                <div className="absolute bottom-4 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl cursor-pointer hover:shadow-xl transition-shadow">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Navigation className="w-5 h-5 text-primary animate-pulse" />
