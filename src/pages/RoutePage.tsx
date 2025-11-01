@@ -154,7 +154,7 @@ const Route = () => {
       
       setFilteredLocations(filtered);
     }
-  }, [searchQuery]);
+  }, [searchQuery, allLocations]);
 
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number) => {
     const R = 3959; // Earth's radius in miles
