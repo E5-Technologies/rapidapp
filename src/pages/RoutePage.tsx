@@ -281,6 +281,40 @@ const Route = () => {
             )}
           </div>
 
+          {/* Routing Details Card - Shows during active navigation */}
+          {selectedLocation && isRouting && routeInfo && (
+            <div className="absolute top-4 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-lg">Route in Progress</h3>
+                <Navigation className="w-5 h-5 text-primary animate-pulse" />
+              </div>
+              
+              <p className="text-sm text-muted-foreground mb-3">
+                To: {selectedLocation.name}
+              </p>
+              
+              <div className="bg-primary/10 rounded-lg p-3 mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">Remaining Distance</span>
+                  <span className="text-xl font-bold text-primary">{routeInfo.distance.toFixed(1)} mi</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">Estimated Time</span>
+                  <span className="text-xl font-bold text-primary">{Math.round(routeInfo.duration)} min</span>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={handleStartRoute}
+                variant="destructive"
+                className="w-full rounded-full h-12 text-base font-semibold"
+              >
+                <X className="w-5 h-5 mr-2" />
+                End Route
+              </Button>
+            </div>
+          )}
+
           {/* Location Detail Card */}
           {selectedLocation && !isRouting && (
             <div className="absolute bottom-4 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl">
