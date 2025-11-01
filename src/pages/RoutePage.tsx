@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Download, Pin, Star, X, Navigation, Settings } from "lucide-react";
+import { Download, Pin, Star, X, Navigation, Settings, ChevronUp } from "lucide-react";
 import SearchBar from "@/components/SearchBar";
 import logo from "@/assets/rapid-logo.png";
 import { Link } from "react-router-dom";
@@ -11,6 +11,11 @@ import InteractiveMap from "@/components/InteractiveMap";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerTrigger,
+} from "@/components/ui/drawer";
 
 interface WellLocation {
   name: string;
@@ -30,6 +35,7 @@ const Route = () => {
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isRouting, setIsRouting] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const { toast } = useToast();
 
   // Comprehensive oil and gas well database with coordinates
@@ -281,38 +287,61 @@ const Route = () => {
             )}
           </div>
 
-          {/* Routing Details Card - Shows during active navigation */}
+          {/* Minimized Routing Details Drawer - Shows during active navigation */}
           {selectedLocation && isRouting && routeInfo && (
-            <div className="absolute top-4 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-lg">Route in Progress</h3>
-                <Navigation className="w-5 h-5 text-primary animate-pulse" />
-              </div>
-              
-              <p className="text-sm text-muted-foreground mb-3">
-                To: {selectedLocation.name}
-              </p>
-              
-              <div className="bg-primary/10 rounded-lg p-3 mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium">Remaining Distance</span>
-                  <span className="text-xl font-bold text-primary">{routeInfo.distance.toFixed(1)} mi</span>
+            <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+              <DrawerTrigger asChild>
+                <div className="absolute bottom-28 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl cursor-pointer hover:shadow-xl transition-shadow">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Navigation className="w-5 h-5 text-primary animate-pulse" />
+                      <div>
+                        <p className="font-semibold text-sm">Route in Progress</p>
+                        <p className="text-xs text-muted-foreground">
+                          {routeInfo.distance.toFixed(1)} mi · {Math.round(routeInfo.duration)} min
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                  </div>
                 </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium">Estimated Time</span>
-                  <span className="text-xl font-bold text-primary">{Math.round(routeInfo.duration)} min</span>
+              </DrawerTrigger>
+              <DrawerContent>
+                <div className="p-6 pb-8">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-bold text-xl">Route Details</h3>
+                    <Navigation className="w-6 h-6 text-primary animate-pulse" />
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Destination: {selectedLocation.name}
+                  </p>
+                  
+                  <div className="bg-primary/10 rounded-lg p-4 mb-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-medium">Remaining Distance</span>
+                      <span className="text-2xl font-bold text-primary">{routeInfo.distance.toFixed(1)} mi</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">Estimated Time</span>
+                      <span className="text-2xl font-bold text-primary">{Math.round(routeInfo.duration)} min</span>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    onClick={() => {
+                      handleStartRoute();
+                      setIsDrawerOpen(false);
+                    }}
+                    variant="destructive"
+                    className="w-full rounded-full h-12 text-base font-semibold"
+                  >
+                    <X className="w-5 h-5 mr-2" />
+                    End Route
+                  </Button>
                 </div>
-              </div>
-              
-              <Button 
-                onClick={handleStartRoute}
-                variant="destructive"
-                className="w-full rounded-full h-12 text-base font-semibold"
-              >
-                <X className="w-5 h-5 mr-2" />
-                End Route
-              </Button>
-            </div>
+              </DrawerContent>
+            </Drawer>
           )}
 
           {/* Location Detail Card */}
