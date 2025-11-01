@@ -72,7 +72,7 @@ const Route = () => {
           console.log(`Loaded ${externalWells.length} wells from multiple sources`);
           toast({
             title: "Well Data Loaded",
-            description: `Loaded ${externalWells.length} wells: DrillingEdge (${data.sources?.drillingEdge || 0}), Oklahoma (${data.sources?.oklahoma || 0}), New Mexico (${data.sources?.newMexico || 0})`,
+            description: `${externalWells.length} wells from ${Object.keys(data.sources || {}).length} sources`,
           });
         }
       } catch (err) {
