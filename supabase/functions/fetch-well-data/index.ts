@@ -99,8 +99,9 @@ async function fetchOklahomaWells(): Promise<WellData[]> {
     for (let offset = 0; offset < 10000; offset += batchSize) {
       const params = new URLSearchParams({
         where: '1=1',
-        outFields: 'API_NUMBER,WELL_NAME,OPERATOR,COUNTY,latitude,longitude',
+        outFields: 'api,well_name,operator,county,sh_lat,sh_lon',
         f: 'json',
+        returnGeometry: 'true',
         resultOffset: offset.toString(),
         resultRecordCount: batchSize.toString(),
       });
@@ -116,15 +117,15 @@ async function fetchOklahomaWells(): Promise<WellData[]> {
         const attrs = feature.attributes;
         const geom = feature.geometry;
         
-        if (!attrs.API_NUMBER) continue;
+        if (!attrs.api) continue;
         
         allWells.push({
-          apiNumber: attrs.API_NUMBER,
-          name: attrs.WELL_NAME || 'Unnamed Well',
-          location: attrs.COUNTY ? `${attrs.COUNTY} County, OK` : 'Oklahoma',
-          operator: attrs.OPERATOR || 'Unknown Operator',
-          lat: geom?.y || attrs.latitude,
-          lng: geom?.x || attrs.longitude,
+          apiNumber: attrs.api?.toString() || '',
+          name: attrs.well_name || 'Unnamed Well',
+          location: attrs.county ? `${attrs.county} County, OK` : 'Oklahoma',
+          operator: attrs.operator || 'Unknown Operator',
+          lat: attrs.sh_lat || geom?.y,
+          lng: attrs.sh_lon || geom?.x,
           source: 'Oklahoma OCC',
         });
       }
@@ -158,7 +159,7 @@ async function fetchNewMexicoOCDWells(): Promise<WellData[]> {
     for (let offset = 0; offset < 20000; offset += batchSize) {
       const params = new URLSearchParams({
         where: '1=1',
-        outFields: 'API_NUMBER,WELL_NAME,OPERATOR,COUNTY',
+        outFields: 'API,wellname,ogrid_name,county',
         f: 'json',
         returnGeometry: 'true',
         resultOffset: offset.toString(),
@@ -176,13 +177,13 @@ async function fetchNewMexicoOCDWells(): Promise<WellData[]> {
         const attrs = feature.attributes;
         const geom = feature.geometry;
         
-        if (!attrs.API_NUMBER || !geom) continue;
+        if (!attrs.API || !geom) continue;
         
         allWells.push({
-          apiNumber: attrs.API_NUMBER,
-          name: attrs.WELL_NAME || 'Unnamed Well',
-          location: attrs.COUNTY ? `${attrs.COUNTY} County, NM` : 'New Mexico',
-          operator: attrs.OPERATOR || 'Unknown Operator',
+          apiNumber: attrs.API,
+          name: attrs.wellname || 'Unnamed Well',
+          location: attrs.county ? `${attrs.county} County, NM` : 'New Mexico',
+          operator: attrs.ogrid_name || 'Unknown Operator',
           lat: geom.y,
           lng: geom.x,
           source: 'New Mexico OCD',
@@ -205,52 +206,6 @@ async function fetchNewMexicoOCDWells(): Promise<WellData[]> {
   }
 }
 
-// Fetch wells from New Mexico Tech GO-TECH Database
-async function fetchGoTechWells(): Promise<WellData[]> {
-  try {
-    console.log('Fetching wells from NM Tech GO-TECH...');
-    
-    // GO-TECH uses a search form, we'll try to fetch the data directly
-    // This is a simplified approach - the actual site may require more complex scraping
-    const allWells: WellData[] = [];
-    
-    // Try to fetch data from the GO-TECH well search
-    // Note: This may need adjustment based on actual site behavior
-    const url = 'https://gotech.nmt.edu/gotech/Petroleum_Data/allwells.aspx';
-    const response = await fetch(url);
-    const html = await response.text();
-    
-    // Parse well data from the page
-    // Looking for table rows with well information
-    const rowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([0-9-]+)<\/td>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([^<]+)<\/td>/gi;
-    
-    let match;
-    let count = 0;
-    while ((match = rowRegex.exec(html)) !== null && count < 1000) {
-      const apiNumber = match[1]?.trim();
-      const name = match[2]?.trim();
-      const operator = match[3]?.trim();
-      const location = match[4]?.trim();
-      
-      if (apiNumber && apiNumber !== 'API') {
-        allWells.push({
-          apiNumber,
-          name: name || 'Unnamed Well',
-          location: location || 'New Mexico',
-          operator: operator || 'Unknown Operator',
-          source: 'NM Tech GO-TECH',
-        });
-        count++;
-      }
-    }
-    
-    console.log(`Fetched ${allWells.length} wells from GO-TECH`);
-    return allWells;
-  } catch (error) {
-    console.error('Error fetching GO-TECH wells:', error);
-    return [];
-  }
-}
 
 // Fetch wells from BLM Fluid Minerals API (Federal Lands)
 async function fetchBLMWells(): Promise<WellData[]> {
@@ -258,16 +213,15 @@ async function fetchBLMWells(): Promise<WellData[]> {
     console.log('Fetching wells from BLM Fluid Minerals...');
     
     // Query BLM ArcGIS REST API for oil and gas leases
-    // Note: This returns leases, not individual wells, but provides location data
     const baseUrl = 'https://gis.blm.gov/nlsdb/rest/services/Fluid_Minerals/Oil_Gas_Leases_Case_Disp/MapServer/0/query';
     const batchSize = 1000;
     const allWells: WellData[] = [];
     
-    // Focus on New Mexico leases (state code = 'NM')
+    // Focus on New Mexico leases using ADMIN_STATE
     for (let offset = 0; offset < 5000; offset += batchSize) {
       const params = new URLSearchParams({
-        where: "STATE_CODE='NM'",
-        outFields: 'SERIAL_NUM,LEASE_NAME,LSEE,CNTY_NAME',
+        where: "ADMIN_STATE='NM'",
+        outFields: 'CSE_NR,CSE_NAME,GEO_STATE',
         f: 'json',
         returnGeometry: 'true',
         resultOffset: offset.toString(),
@@ -285,7 +239,7 @@ async function fetchBLMWells(): Promise<WellData[]> {
         const attrs = feature.attributes;
         const geom = feature.geometry;
         
-        if (!attrs.SERIAL_NUM || !geom) continue;
+        if (!attrs.CSE_NR || !geom) continue;
         
         // Calculate centroid for polygon geometries
         let lat: number | undefined;
@@ -308,10 +262,10 @@ async function fetchBLMWells(): Promise<WellData[]> {
         
         if (lat && lng) {
           allWells.push({
-            apiNumber: attrs.SERIAL_NUM,
-            name: attrs.LEASE_NAME || 'BLM Lease',
-            location: attrs.CNTY_NAME ? `${attrs.CNTY_NAME} County, NM` : 'New Mexico',
-            operator: attrs.LSEE || 'BLM Lessee',
+            apiNumber: attrs.CSE_NR,
+            name: attrs.CSE_NAME || 'BLM Lease',
+            location: attrs.GEO_STATE ? `${attrs.GEO_STATE}` : 'New Mexico',
+            operator: 'BLM Federal Lease',
             lat,
             lng,
             source: 'BLM Federal',
@@ -343,19 +297,18 @@ serve(async (req) => {
   try {
     console.log('Fetching well data from multiple sources...');
     
-    // Fetch from all sources in parallel
-    const [drillingEdgeWells, oklahomaWells, nmOCDWells, goTechWells, blmWells] = await Promise.all([
+    // Fetch from all sources in parallel (excluding GO-TECH as it requires form submission)
+    const [drillingEdgeWells, oklahomaWells, nmOCDWells, blmWells] = await Promise.all([
       fetchDrillingEdgeWells(),
       fetchOklahomaWells(),
       fetchNewMexicoOCDWells(),
-      fetchGoTechWells(),
       fetchBLMWells(),
     ]);
     
     // Combine all wells
-    const wells = [...drillingEdgeWells, ...oklahomaWells, ...nmOCDWells, ...goTechWells, ...blmWells];
+    const wells = [...drillingEdgeWells, ...oklahomaWells, ...nmOCDWells, ...blmWells];
     
-    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length}, NM OCD: ${nmOCDWells.length}, GO-TECH: ${goTechWells.length}, BLM: ${blmWells.length})`);
+    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length}, NM OCD: ${nmOCDWells.length}, BLM: ${blmWells.length})`);
     
     return new Response(
       JSON.stringify({
@@ -366,7 +319,6 @@ serve(async (req) => {
           drillingEdge: drillingEdgeWells.length,
           oklahoma: oklahomaWells.length,
           newMexicoOCD: nmOCDWells.length,
-          goTech: goTechWells.length,
           blm: blmWells.length,
         },
       }),
