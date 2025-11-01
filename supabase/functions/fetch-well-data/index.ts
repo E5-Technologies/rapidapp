@@ -145,6 +145,66 @@ async function fetchOklahomaWells(): Promise<WellData[]> {
   }
 }
 
+// Fetch wells from New Mexico Oil Conservation Division
+async function fetchNewMexicoWells(): Promise<WellData[]> {
+  try {
+    console.log('Fetching wells from New Mexico OCD...');
+    
+    // Query New Mexico MapServer for wells (Active wells - layer 5)
+    const baseUrl = 'https://mapservice.nmstatelands.org/arcgis/rest/services/Public/NMOCD_Wells_V3/MapServer/5/query';
+    const batchSize = 2000;
+    const allWells: WellData[] = [];
+    
+    for (let offset = 0; offset < 20000; offset += batchSize) {
+      const params = new URLSearchParams({
+        where: '1=1',
+        outFields: 'API_NUMBER,WELL_NAME,OPERATOR,COUNTY',
+        f: 'json',
+        returnGeometry: 'true',
+        resultOffset: offset.toString(),
+        resultRecordCount: batchSize.toString(),
+      });
+      
+      const response = await fetch(`${baseUrl}?${params}`);
+      const data = await response.json();
+      
+      if (!data.features || data.features.length === 0) {
+        break; // No more records
+      }
+      
+      for (const feature of data.features) {
+        const attrs = feature.attributes;
+        const geom = feature.geometry;
+        
+        if (!attrs.API_NUMBER || !geom) continue;
+        
+        allWells.push({
+          apiNumber: attrs.API_NUMBER,
+          name: attrs.WELL_NAME || 'Unnamed Well',
+          location: attrs.COUNTY ? `${attrs.COUNTY} County, NM` : 'New Mexico',
+          operator: attrs.OPERATOR || 'Unknown Operator',
+          lat: geom.y,
+          lng: geom.x,
+          source: 'New Mexico OCD',
+        });
+      }
+      
+      console.log(`Fetched ${allWells.length} wells from New Mexico so far...`);
+      
+      // If we got fewer results than batch size, we're done
+      if (data.features.length < batchSize) {
+        break;
+      }
+    }
+    
+    console.log(`Fetched ${allWells.length} total wells from New Mexico`);
+    return allWells;
+  } catch (error) {
+    console.error('Error fetching New Mexico wells:', error);
+    return [];
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -153,16 +213,17 @@ serve(async (req) => {
   try {
     console.log('Fetching well data from multiple sources...');
     
-    // Fetch from both sources in parallel
-    const [drillingEdgeWells, oklahomaWells] = await Promise.all([
+    // Fetch from all sources in parallel
+    const [drillingEdgeWells, oklahomaWells, newMexicoWells] = await Promise.all([
       fetchDrillingEdgeWells(),
       fetchOklahomaWells(),
+      fetchNewMexicoWells(),
     ]);
     
     // Combine all wells
-    const wells = [...drillingEdgeWells, ...oklahomaWells];
+    const wells = [...drillingEdgeWells, ...oklahomaWells, ...newMexicoWells];
     
-    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length})`);
+    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length}, New Mexico: ${newMexicoWells.length})`);
     
     return new Response(
       JSON.stringify({
@@ -172,6 +233,7 @@ serve(async (req) => {
         sources: {
           drillingEdge: drillingEdgeWells.length,
           oklahoma: oklahomaWells.length,
+          newMexico: newMexicoWells.length,
         },
       }),
       {
