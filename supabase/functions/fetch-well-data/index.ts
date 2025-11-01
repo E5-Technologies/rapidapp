@@ -12,6 +12,7 @@ interface WellData {
   operator: string;
   lat?: number;
   lng?: number;
+  source?: string;
 }
 
 // County coordinates cache for faster geocoding
@@ -28,60 +29,118 @@ const countyCoordinates: Record<string, { lat: number; lng: number }> = {
   'Converse County, WY': { lat: 42.8633, lng: -105.5858 },
 };
 
-async function fetchPageWells(page: number): Promise<WellData[]> {
+// Fetch wells from DrillingEdge
+async function fetchDrillingEdgeWells(): Promise<WellData[]> {
   try {
-    console.log(`Fetching page ${page} from DrillingEdge...`);
-    const url = page === 1 
-      ? 'https://www.drillingedge.com/wells'
-      : `https://www.drillingedge.com/wells?page=${page}`;
+    console.log('Fetching wells from DrillingEdge...');
+    const allWells: WellData[] = [];
     
-    const response = await fetch(url);
-    const html = await response.text();
-    
-    const wells: WellData[] = [];
-    
-    // Parse HTML table rows - look for <tr> containing well data
-    // Pattern: <td>API</td><td><a>Name</a></td><td>Location</td><td>Operator</td>
-    const rowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([0-9-]+)<\/td>[\s\S]*?<a[^>]*>([^<]+)<\/a>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([^<]+)<\/td>/gi;
-    
-    let match;
-    while ((match = rowRegex.exec(html)) !== null) {
-      const apiNumber = match[1].trim();
-      const name = match[2].trim();
-      const location = match[3].trim();
-      const operator = match[4].trim();
+    // Fetch multiple pages (11 pages visible in pagination)
+    for (let page = 1; page <= 11; page++) {
+      const url = page === 1 
+        ? 'https://www.drillingedge.com/wells'
+        : `https://www.drillingedge.com/wells?page=${page}`;
       
-      // Skip header rows
-      if (apiNumber === 'API #' || name === 'Well Name') {
-        continue;
+      const response = await fetch(url);
+      const html = await response.text();
+      
+      const rowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*>([0-9-]+)<\/td>[\s\S]*?<a[^>]*>([^<]+)<\/a>[\s\S]*?<td[^>]*>([^<]+)<\/td>[\s\S]*?<td[^>]*>([^<]+)<\/td>/gi;
+      
+      let match;
+      while ((match = rowRegex.exec(html)) !== null) {
+        const apiNumber = match[1].trim();
+        const name = match[2].trim();
+        const location = match[3].trim();
+        const operator = match[4].trim();
+        
+        if (apiNumber === 'API #' || name === 'Well Name') continue;
+        
+        const countyCoord = countyCoordinates[location];
+        let lat: number | undefined;
+        let lng: number | undefined;
+        
+        if (countyCoord) {
+          const randomOffset = () => (Math.random() - 0.5) * 0.2;
+          lat = countyCoord.lat + randomOffset();
+          lng = countyCoord.lng + randomOffset();
+        }
+        
+        allWells.push({
+          apiNumber,
+          name,
+          location,
+          operator,
+          lat,
+          lng,
+          source: 'DrillingEdge',
+        });
       }
-      
-      // Get coordinates from county cache
-      const countyCoord = countyCoordinates[location];
-      let lat: number | undefined;
-      let lng: number | undefined;
-      
-      if (countyCoord) {
-        // Add small random offset to spread wells across the county
-        const randomOffset = () => (Math.random() - 0.5) * 0.2;
-        lat = countyCoord.lat + randomOffset();
-        lng = countyCoord.lng + randomOffset();
-      }
-      
-      wells.push({
-        apiNumber,
-        name,
-        location,
-        operator,
-        lat,
-        lng,
-      });
     }
     
-    console.log(`Parsed ${wells.length} wells from page ${page}`);
-    return wells;
+    console.log(`Fetched ${allWells.length} wells from DrillingEdge`);
+    return allWells;
   } catch (error) {
-    console.error(`Error fetching page ${page}:`, error);
+    console.error('Error fetching DrillingEdge wells:', error);
+    return [];
+  }
+}
+
+// Fetch wells from Oklahoma Corporation Commission ArcGIS API
+async function fetchOklahomaWells(): Promise<WellData[]> {
+  try {
+    console.log('Fetching wells from Oklahoma Corporation Commission...');
+    
+    // Query Oklahoma ArcGIS REST API for wells
+    // Fetch in batches due to API limits
+    const baseUrl = 'https://gis.occ.ok.gov/server/rest/services/Hosted/RBDMS_WELLS/FeatureServer/220/query';
+    const batchSize = 2000;
+    const allWells: WellData[] = [];
+    
+    for (let offset = 0; offset < 10000; offset += batchSize) {
+      const params = new URLSearchParams({
+        where: '1=1',
+        outFields: 'API_NUMBER,WELL_NAME,OPERATOR,COUNTY,latitude,longitude',
+        f: 'json',
+        resultOffset: offset.toString(),
+        resultRecordCount: batchSize.toString(),
+      });
+      
+      const response = await fetch(`${baseUrl}?${params}`);
+      const data = await response.json();
+      
+      if (!data.features || data.features.length === 0) {
+        break; // No more records
+      }
+      
+      for (const feature of data.features) {
+        const attrs = feature.attributes;
+        const geom = feature.geometry;
+        
+        if (!attrs.API_NUMBER) continue;
+        
+        allWells.push({
+          apiNumber: attrs.API_NUMBER,
+          name: attrs.WELL_NAME || 'Unnamed Well',
+          location: attrs.COUNTY ? `${attrs.COUNTY} County, OK` : 'Oklahoma',
+          operator: attrs.OPERATOR || 'Unknown Operator',
+          lat: geom?.y || attrs.latitude,
+          lng: geom?.x || attrs.longitude,
+          source: 'Oklahoma OCC',
+        });
+      }
+      
+      console.log(`Fetched ${allWells.length} wells from Oklahoma so far...`);
+      
+      // If we got fewer results than batch size, we're done
+      if (data.features.length < batchSize) {
+        break;
+      }
+    }
+    
+    console.log(`Fetched ${allWells.length} total wells from Oklahoma`);
+    return allWells;
+  } catch (error) {
+    console.error('Error fetching Oklahoma wells:', error);
     return [];
   }
 }
@@ -92,27 +151,28 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching well data from DrillingEdge...');
+    console.log('Fetching well data from multiple sources...');
     
-    // Fetch multiple pages (11 pages visible in pagination)
-    const pagePromises: Promise<WellData[]>[] = [];
-    for (let page = 1; page <= 11; page++) {
-      pagePromises.push(fetchPageWells(page));
-    }
+    // Fetch from both sources in parallel
+    const [drillingEdgeWells, oklahomaWells] = await Promise.all([
+      fetchDrillingEdgeWells(),
+      fetchOklahomaWells(),
+    ]);
     
-    // Wait for all pages to be fetched
-    const pageResults = await Promise.all(pagePromises);
+    // Combine all wells
+    const wells = [...drillingEdgeWells, ...oklahomaWells];
     
-    // Flatten all wells into a single array
-    const wells = pageResults.flat();
-    
-    console.log(`Successfully fetched ${wells.length} total wells from DrillingEdge`);
+    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length})`);
     
     return new Response(
       JSON.stringify({
         success: true,
         wells,
         count: wells.length,
+        sources: {
+          drillingEdge: drillingEdgeWells.length,
+          oklahoma: oklahomaWells.length,
+        },
       }),
       {
         headers: {

@@ -20,6 +20,7 @@ interface WellLocation {
   lng: number;
   operator?: string;
   field?: string;
+  source?: string;
 }
 
 const Route = () => {
@@ -64,13 +65,14 @@ const Route = () => {
             lng: well.lng,
             operator: well.operator,
             field: well.location,
+            source: well.source,
           }));
           
           setAllLocations(externalWells);
-          console.log(`Loaded ${externalWells.length} wells from DrillingEdge`);
+          console.log(`Loaded ${externalWells.length} wells from multiple sources`);
           toast({
             title: "Well Data Loaded",
-            description: `Loaded ${externalWells.length} wells and leases`,
+            description: `Loaded ${externalWells.length} wells from ${data.sources?.drillingEdge || 0} DrillingEdge + ${data.sources?.oklahoma || 0} Oklahoma`,
           });
         }
       } catch (err) {
@@ -303,8 +305,13 @@ const Route = () => {
                   </p>
                 )}
                 {selectedLocation.field && (
-                  <p className="text-xs text-muted-foreground mb-3">
+                  <p className="text-xs text-muted-foreground">
                     Field: {selectedLocation.field}
+                  </p>
+                )}
+                {selectedLocation.source && (
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Source: {selectedLocation.source}
                   </p>
                 )}
                 
