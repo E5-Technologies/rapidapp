@@ -282,7 +282,7 @@ const Route = () => {
           </div>
 
           {/* Location Detail Card */}
-          {selectedLocation && (
+          {selectedLocation && !isRouting && (
             <div className="absolute bottom-4 left-4 right-4 bg-card rounded-2xl p-4 shadow-2xl">
               <button
                 onClick={() => {
