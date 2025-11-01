@@ -27,6 +27,12 @@ const countyCoordinates: Record<string, { lat: number; lng: number }> = {
   'Mountrail County, ND': { lat: 48.2411, lng: -102.3485 },
   'Adams County, CO': { lat: 39.8744, lng: -104.3297 },
   'Converse County, WY': { lat: 42.8633, lng: -105.5858 },
+  'Reeves County, TX': { lat: 31.3962, lng: -103.6050 },
+  'Loving County, TX': { lat: 31.8548, lng: -103.5794 },
+  'Ward County, TX': { lat: 31.4928, lng: -103.0994 },
+  'Midland County, TX': { lat: 31.8587, lng: -102.0779 },
+  'Martin County, TX': { lat: 32.3093, lng: -101.9527 },
+  'Howard County, TX': { lat: 32.3093, lng: -101.4268 },
 };
 
 // Fetch wells from DrillingEdge
@@ -289,6 +295,66 @@ async function fetchBLMWells(): Promise<WellData[]> {
   }
 }
 
+// Fetch wells from Texas Railroad Commission
+async function fetchTexasRRCWells(): Promise<WellData[]> {
+  try {
+    console.log('Fetching wells from Texas Railroad Commission...');
+    
+    // Query Texas RRC ArcGIS REST API for wells
+    const baseUrl = 'https://gis.rrc.texas.gov/server/rest/services/OilAndGas/Wells/MapServer/0/query';
+    const batchSize = 2000;
+    const allWells: WellData[] = [];
+    
+    for (let offset = 0; offset < 10000; offset += batchSize) {
+      const params = new URLSearchParams({
+        where: '1=1',
+        outFields: 'API_Unique,Well_Number,Operator_Name,County,Latitude,Longitude',
+        f: 'json',
+        returnGeometry: 'true',
+        resultOffset: offset.toString(),
+        resultRecordCount: batchSize.toString(),
+      });
+      
+      const response = await fetch(`${baseUrl}?${params}`);
+      const data = await response.json();
+      
+      if (!data.features || data.features.length === 0) {
+        break; // No more records
+      }
+      
+      for (const feature of data.features) {
+        const attrs = feature.attributes;
+        const geom = feature.geometry;
+        
+        if (!attrs.API_Unique) continue;
+        
+        allWells.push({
+          apiNumber: attrs.API_Unique?.toString() || '',
+          name: attrs.Well_Number || 'Unnamed Well',
+          location: attrs.County ? `${attrs.County} County, TX` : 'Texas',
+          operator: attrs.Operator_Name || 'Unknown Operator',
+          lat: attrs.Latitude || geom?.y,
+          lng: attrs.Longitude || geom?.x,
+          source: 'Texas RRC',
+        });
+      }
+      
+      console.log(`Fetched ${allWells.length} wells from Texas RRC so far...`);
+      
+      // If we got fewer results than batch size, we're done
+      if (data.features.length < batchSize) {
+        break;
+      }
+    }
+    
+    console.log(`Fetched ${allWells.length} total wells from Texas RRC`);
+    return allWells;
+  } catch (error) {
+    console.error('Error fetching Texas RRC wells:', error);
+    return [];
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -297,18 +363,19 @@ serve(async (req) => {
   try {
     console.log('Fetching well data from multiple sources...');
     
-    // Fetch from all sources in parallel (excluding GO-TECH as it requires form submission)
-    const [drillingEdgeWells, oklahomaWells, nmOCDWells, blmWells] = await Promise.all([
+    // Fetch from all sources in parallel
+    const [drillingEdgeWells, oklahomaWells, nmOCDWells, blmWells, texasWells] = await Promise.all([
       fetchDrillingEdgeWells(),
       fetchOklahomaWells(),
       fetchNewMexicoOCDWells(),
       fetchBLMWells(),
+      fetchTexasRRCWells(),
     ]);
     
     // Combine all wells
-    const wells = [...drillingEdgeWells, ...oklahomaWells, ...nmOCDWells, ...blmWells];
+    const wells = [...drillingEdgeWells, ...oklahomaWells, ...nmOCDWells, ...blmWells, ...texasWells];
     
-    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length}, NM OCD: ${nmOCDWells.length}, BLM: ${blmWells.length})`);
+    console.log(`Successfully fetched ${wells.length} total wells (DrillingEdge: ${drillingEdgeWells.length}, Oklahoma: ${oklahomaWells.length}, NM OCD: ${nmOCDWells.length}, BLM: ${blmWells.length}, Texas: ${texasWells.length})`);
     
     return new Response(
       JSON.stringify({
@@ -320,6 +387,7 @@ serve(async (req) => {
           oklahoma: oklahomaWells.length,
           newMexicoOCD: nmOCDWells.length,
           blm: blmWells.length,
+          texas: texasWells.length,
         },
       }),
       {
