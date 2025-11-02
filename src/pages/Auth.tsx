@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { Session, User } from '@supabase/supabase-js';
+import logo from "@/assets/rapid-logo-new.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -81,7 +82,10 @@ const Auth = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img src={logo} alt="Rapid Industrial Supply Logo" className="h-16 w-auto" />
+          </div>
           <CardTitle>Welcome</CardTitle>
           <CardDescription>Sign in to continue to Materials</CardDescription>
         </CardHeader>
