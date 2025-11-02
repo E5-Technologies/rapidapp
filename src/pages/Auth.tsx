@@ -87,7 +87,6 @@ const Auth = () => {
             <img src={logo} alt="Rapid Industrial Supply Logo" className="h-16 w-auto" />
           </div>
           <CardTitle>Welcome</CardTitle>
-          <CardDescription>Sign in to continue to Materials</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="signin" className="w-full">
