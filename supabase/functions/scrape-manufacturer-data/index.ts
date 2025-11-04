@@ -18,11 +18,81 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user has admin role
+    const { data: hasAdminRole, error: roleError } = await supabaseClient.rpc('has_role', {
+      _user_id: user.id,
+      _role: 'admin'
+    });
+
+    if (roleError || !hasAdminRole) {
+      return new Response(
+        JSON.stringify({ error: 'Admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { manufacturerUrls, materialCategory }: ManufacturerScrapeRequest = await req.json();
     
-    if (!manufacturerUrls || manufacturerUrls.length === 0) {
+    // Input validation
+    if (!manufacturerUrls || !Array.isArray(manufacturerUrls) || manufacturerUrls.length === 0) {
       return new Response(
         JSON.stringify({ error: 'At least one manufacturer URL is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (manufacturerUrls.length > 10) {
+      return new Response(
+        JSON.stringify({ error: 'Maximum 10 URLs allowed per request' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate all URLs
+    for (const url of manufacturerUrls) {
+      if (typeof url !== 'string' || !url.startsWith('https://')) {
+        return new Response(
+          JSON.stringify({ error: 'All URLs must be valid HTTPS URLs' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      try {
+        new URL(url);
+      } catch {
+        return new Response(
+          JSON.stringify({ error: `Invalid URL format: ${url}` }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    if (materialCategory && (typeof materialCategory !== 'string' || materialCategory.length > 50)) {
+      return new Response(
+        JSON.stringify({ error: 'Material category must be 50 characters or less' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

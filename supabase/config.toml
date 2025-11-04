@@ -3,14 +3,5 @@ project_id = "rwinelghzsuetpgrzwph"
 [functions.get-mapbox-token]
 verify_jwt = false
 
-[functions.identify-material]
-verify_jwt = false
-
 [functions.update-material-rankings]
-verify_jwt = false
-
-[functions.search-material]
-verify_jwt = false
-
-[functions.fetch-well-data]
-verify_jwt = false
+verify_jwt = true
