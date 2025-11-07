@@ -242,15 +242,16 @@ const Materials = () => {
   }
 
   // Handle search input with debounce
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    
-    // Debounce the search
+  useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setActiveSearchQuery(value);
+      setActiveSearchQuery(searchQuery);
     }, 300);
 
     return () => clearTimeout(timeoutId);
+  }, [searchQuery]);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
   };
 
   const handleContactClick = (manufacturerId: string, manufacturerName: string) => {
@@ -284,6 +285,7 @@ const Materials = () => {
         <SearchBar
           placeholder="Search by description, serial, or model..." 
           onChange={handleSearchChange}
+          value={searchQuery}
         />
         <CategoryScroll 
           selectedCategory={selectedCategory}
