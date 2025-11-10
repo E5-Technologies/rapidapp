@@ -252,7 +252,7 @@ const Materials = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Centered Search */}
-      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
+      <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
         <h1 className="text-2xl font-semibold text-center mb-8">Search</h1>
         
         <div className="w-full max-w-md">
