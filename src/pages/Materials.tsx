@@ -4,7 +4,6 @@ import SearchBar from "@/components/SearchBar";
 import logo from "@/assets/rapid-logo.png";
 import { Link } from "react-router-dom";
 
-import CategoryScroll from "@/components/CategoryScroll";
 import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
 import MaterialIdentificationDialog from "@/components/MaterialIdentificationDialog";
@@ -40,7 +39,6 @@ interface Material {
 }
 
 const Materials = () => {
-  const [selectedCategory, setSelectedCategory] = useState("Valves");
   const [selectedManufacturer, setSelectedManufacturer] = useState<string>("all");
   const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [showDialog, setShowDialog] = useState(false);
@@ -72,7 +70,6 @@ const Materials = () => {
             *,
             manufacturer:manufacturers(name, logo_url)
           `)
-          .eq('category', selectedCategory)
           .order('purchase_count', { ascending: false })
           .limit(200);
 
@@ -99,14 +96,7 @@ const Materials = () => {
     };
 
     fetchMaterials();
-  }, [selectedCategory, toast]);
-
-  // Reset manufacturer filter and search when category changes
-  useEffect(() => {
-    setSelectedManufacturer("all");
-    setActiveSearchQuery("");
-    setSearchQuery("");
-  }, [selectedCategory]);
+  }, [toast]);
 
   // Apply search filter
   useEffect(() => {
@@ -261,42 +251,36 @@ const Materials = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Simplified Header */}
-      <div className="sticky top-0 bg-background z-10 pt-8">
-        <h1 className="text-2xl font-semibold text-center px-4 py-6">Search</h1>
+      {/* Centered Search */}
+      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
+        <h1 className="text-2xl font-semibold text-center mb-8">Search</h1>
         
-        <SearchBar
-          placeholder="" 
-          onChange={handleSearchChange}
-          value={searchQuery}
-          onCameraClick={() => fileInputRef.current?.click()}
-        />
+        <div className="w-full max-w-md">
+          <SearchBar
+            placeholder="" 
+            onChange={handleSearchChange}
+            value={searchQuery}
+            onCameraClick={() => fileInputRef.current?.click()}
+          />
+        </div>
         
-        {/* Show filters and categories only when searching or results exist */}
+        {/* Manufacturer Filter - Show when searching */}
         {(activeSearchQuery || filteredMaterials.length > 0) && (
-          <>
-            <CategoryScroll 
-              selectedCategory={selectedCategory}
-              onCategorySelect={setSelectedCategory}
-            />
-            
-            {/* Manufacturer Filter */}
-            <div className="px-4 pb-3 flex items-center justify-end">
-              <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-                <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
-                  <Filter className="w-4 h-4 mx-auto" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-50 text-xs">
-                  <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
-                  {manufacturers.map((manufacturer) => (
-                    <SelectItem key={manufacturer} value={manufacturer} className="text-xs">
-                      {manufacturer}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </>
+          <div className="mt-4 flex items-center justify-center">
+            <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
+              <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
+                <Filter className="w-4 h-4 mx-auto" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-50 text-xs">
+                <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
+                {manufacturers.map((manufacturer) => (
+                  <SelectItem key={manufacturer} value={manufacturer} className="text-xs">
+                    {manufacturer}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
       </div>
 
