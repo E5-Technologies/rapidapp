@@ -260,82 +260,74 @@ const Materials = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <div className="sticky top-0 bg-background z-10 pt-2">
-        <div className="flex items-center justify-between px-4 py-2">
-          <span className="text-sm font-medium">9:41</span>
-          <div className="flex items-center gap-1">
-            <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
-            <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
-            <div className="w-4 h-3 bg-foreground rounded-sm opacity-70" />
-          </div>
-        </div>
-        
-        <div className="flex items-center justify-between px-4 py-1">
-          <div className="w-5" />
-          <img src={logo} alt="Rapid Logo" className="h-10 w-auto" />
-          <Link to="/settings">
-            <Settings className="w-5 h-5 text-foreground hover:text-primary transition-colors" />
-          </Link>
-        </div>
-        
-        <h1 className="text-2xl font-bold px-4 py-2">Browse</h1>
+    <div className="min-h-screen bg-background pb-20">
+      {/* Simplified Header */}
+      <div className="sticky top-0 bg-background z-10 pt-8">
+        <h1 className="text-2xl font-semibold text-center px-4 py-6">Search</h1>
         
         <SearchBar
-          placeholder="Search by description, serial, or model..." 
+          placeholder="" 
           onChange={handleSearchChange}
           value={searchQuery}
-        />
-        <CategoryScroll 
-          selectedCategory={selectedCategory}
-          onCategorySelect={setSelectedCategory}
+          onCameraClick={() => fileInputRef.current?.click()}
         />
         
-        {/* Manufacturer Filter */}
-        <div className="px-4 pb-3 flex items-center justify-end">
-          <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-            <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
-              <Filter className="w-4 h-4 mx-auto" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover z-50 text-xs">
-              <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
-              {manufacturers.map((manufacturer) => (
-                <SelectItem key={manufacturer} value={manufacturer} className="text-xs">
-                  {manufacturer}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Product List */}
-      <div className="px-4 space-y-8 mt-4">
-        {loading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
-        ) : filteredMaterials.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            {activeSearchQuery ? `No materials found for "${activeSearchQuery}"` : "No materials found."}
-          </div>
-        ) : (
-          // Materials ranked by popularity (purchase_count)
-          filteredMaterials.map((material) => (
-            <ProductCard
-              key={material.id}
-              company={material.manufacturer?.name || 'Unknown'}
-              logo={material.manufacturer?.logo_url || ''}
-              title={material.title}
-              product={material.product_name}
-              rating={material.rating}
-              image={material.image_url || ''}
-              dataSheet={material.datasheet_url}
-              manufacturerId={material.manufacturer_id}
-              onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
+        {/* Show filters and categories only when searching or results exist */}
+        {(activeSearchQuery || filteredMaterials.length > 0) && (
+          <>
+            <CategoryScroll 
+              selectedCategory={selectedCategory}
+              onCategorySelect={setSelectedCategory}
             />
-          ))
+            
+            {/* Manufacturer Filter */}
+            <div className="px-4 pb-3 flex items-center justify-end">
+              <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
+                <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
+                  <Filter className="w-4 h-4 mx-auto" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover z-50 text-xs">
+                  <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
+                  {manufacturers.map((manufacturer) => (
+                    <SelectItem key={manufacturer} value={manufacturer} className="text-xs">
+                      {manufacturer}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
       </div>
+
+      {/* Product List - Only show when there's a search query or active filters */}
+      {(activeSearchQuery || selectedManufacturer !== "all") && (
+        <div className="px-4 space-y-8 mt-4">
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
+          ) : filteredMaterials.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {activeSearchQuery ? `No materials found for "${activeSearchQuery}"` : "No materials found."}
+            </div>
+          ) : (
+            // Materials ranked by popularity (purchase_count)
+            filteredMaterials.map((material) => (
+              <ProductCard
+                key={material.id}
+                company={material.manufacturer?.name || 'Unknown'}
+                logo={material.manufacturer?.logo_url || ''}
+                title={material.title}
+                product={material.product_name}
+                rating={material.rating}
+                image={material.image_url || ''}
+                dataSheet={material.datasheet_url}
+                manufacturerId={material.manufacturer_id}
+                onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
+              />
+            ))
+          )}
+        </div>
+      )}
 
       {/* Camera FAB */}
       <input

@@ -1,6 +1,7 @@
-import { Search, MapPin } from "lucide-react";
+import { Search, MapPin, Camera } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useState, useRef, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 interface Suggestion {
   name: string;
@@ -17,6 +18,7 @@ interface SearchBarProps {
   onSuggestionSelect?: (suggestion: Suggestion) => void;
   onEnterPress?: () => void;
   value?: string;
+  onCameraClick?: () => void;
 }
 
 const SearchBar = ({ 
@@ -26,7 +28,8 @@ const SearchBar = ({
   suggestions = [],
   onSuggestionSelect,
   onEnterPress,
-  value = ""
+  value = "",
+  onCameraClick
 }: SearchBarProps) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -61,17 +64,27 @@ const SearchBar = ({
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-3" ref={wrapperRef}>
+    <div className="flex items-center gap-3 px-4 py-3" ref={wrapperRef}>
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground z-10" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground z-10" />
         <Input
           placeholder={placeholder}
-          className="pl-10 rounded-full bg-input border-0 h-11"
+          className="pl-12 pr-14 rounded-full bg-background border-2 border-foreground h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           value={value}
           onFocus={() => value.trim().length > 0 && setShowSuggestions(true)}
         />
+        {onCameraClick && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-foreground hover:bg-foreground/90 z-10"
+            onClick={onCameraClick}
+          >
+            <Camera className="w-5 h-5 text-background" />
+          </Button>
+        )}
         
         {/* Suggestions Dropdown */}
         {showSuggestions && suggestions.length > 0 && (
