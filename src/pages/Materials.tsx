@@ -251,22 +251,20 @@ const Materials = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      {/* Centered Search */}
-      <div className="flex flex-col items-center justify-center min-h-[70vh] px-4">
-        <h1 className="text-2xl font-semibold text-left w-full max-w-md mb-8">Material Search</h1>
+      {/* Header */}
+      <div className="sticky top-0 bg-background z-10 pt-2">
+        <h1 className="text-2xl font-semibold px-4 py-2">Material Search</h1>
         
-        <div className="w-full max-w-md">
-          <SearchBar
-            placeholder="" 
-            onChange={handleSearchChange}
-            value={searchQuery}
-            onCameraClick={() => fileInputRef.current?.click()}
-          />
-        </div>
+        <SearchBar
+          placeholder="" 
+          onChange={handleSearchChange}
+          value={searchQuery}
+          onCameraClick={() => fileInputRef.current?.click()}
+        />
         
         {/* Manufacturer Filter - Show when searching */}
         {(activeSearchQuery || filteredMaterials.length > 0) && (
-          <div className="mt-4 flex items-center justify-center">
+          <div className="px-4 mt-2 flex items-center">
             <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
               <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
                 <Filter className="w-4 h-4 mx-auto" />
