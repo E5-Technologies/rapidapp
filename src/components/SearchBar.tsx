@@ -17,6 +17,7 @@ interface SearchBarProps {
   suggestions?: Suggestion[];
   onSuggestionSelect?: (suggestion: Suggestion) => void;
   onEnterPress?: () => void;
+  onSearchClick?: () => void;
   value?: string;
   onCameraClick?: () => void;
 }
@@ -28,6 +29,7 @@ const SearchBar = ({
   suggestions = [],
   onSuggestionSelect,
   onEnterPress,
+  onSearchClick,
   value = "",
   onCameraClick
 }: SearchBarProps) => {
@@ -66,7 +68,14 @@ const SearchBar = ({
   return (
     <div className="flex items-center gap-3 px-4 py-3" ref={wrapperRef}>
       <div className="relative flex-1">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground z-10" />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full hover:bg-muted z-10"
+          onClick={onSearchClick}
+        >
+          <Search className="w-5 h-5 text-foreground" />
+        </Button>
         <Input
           placeholder={placeholder}
           className="pl-12 pr-14 rounded-full bg-background border-2 border-foreground h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0"

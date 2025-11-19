@@ -236,17 +236,12 @@ const Materials = () => {
     }
   }
 
-  // Handle search input with debounce
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setActiveSearchQuery(searchQuery);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery]);
-
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
+  };
+
+  const handleSearchSubmit = () => {
+    setActiveSearchQuery(searchQuery);
   };
 
   const handleContactClick = (manufacturerId: string, manufacturerName: string) => {
@@ -285,6 +280,8 @@ const Materials = () => {
               placeholder="Material Description, Serial Number, Model Number etc."
               value={searchQuery}
               onChange={handleSearchChange}
+              onEnterPress={handleSearchSubmit}
+              onSearchClick={handleSearchSubmit}
               onCameraClick={() => fileInputRef.current?.click()}
             />
           </div>
@@ -300,6 +297,8 @@ const Materials = () => {
               placeholder="Material Description, Serial Number, Model Number etc."
               value={searchQuery}
               onChange={handleSearchChange}
+              onEnterPress={handleSearchSubmit}
+              onSearchClick={handleSearchSubmit}
               onCameraClick={() => fileInputRef.current?.click()}
             />
           </div>
