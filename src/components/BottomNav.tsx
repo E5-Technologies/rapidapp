@@ -1,4 +1,4 @@
-import { Camera } from "lucide-react";
+import { Camera, Car } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
@@ -44,20 +44,7 @@ const BottomNav = () => {
             location.pathname === "/route" ? "text-foreground" : "text-muted-foreground"
           }`}
         >
-          <svg 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="2" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-            className="w-7 h-7"
-          >
-            {/* Folded map icon */}
-            <path d="M9 18V6l-5 3v12l5-3z" />
-            <path d="M9 6l6-3v12l-6 3V6z" />
-            <path d="M15 3v12l5-3V0l-5 3z" />
-          </svg>
+          <Car className="w-7 h-7" strokeWidth={2} />
           <span className="text-xs font-semibold">Route</span>
         </Link>
 
