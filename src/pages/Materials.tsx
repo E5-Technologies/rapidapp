@@ -249,15 +249,20 @@ const Materials = () => {
             <Settings className="w-5 h-5 text-foreground hover:text-primary transition-colors" />
           </Link>
         </div>
+      </div>
+
+      {/* Centered Search Section */}
+      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
+        <h1 className="text-2xl font-semibold mb-8">Material Search</h1>
         
-        <h1 className="text-2xl font-semibold px-4 py-2 pb-6">Material Search</h1>
-        
-        <SearchBar
-          placeholder="Material Description, Serial Number, Model Number etc." 
-          onChange={handleSearchChange}
-          value={searchQuery}
-          onCameraClick={() => fileInputRef.current?.click()}
-        />
+        <div className="w-full max-w-2xl">
+          <SearchBar
+            placeholder="Material Description, Serial Number, Model Number etc." 
+            onChange={handleSearchChange}
+            value={searchQuery}
+            onCameraClick={() => fileInputRef.current?.click()}
+          />
+        </div>
       </div>
 
       {/* Product List - Only show when there's a search query or active filters */}
