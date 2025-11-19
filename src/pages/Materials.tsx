@@ -270,7 +270,7 @@ const Materials = () => {
           </Link>
         </div>
         
-        <h1 className="text-2xl font-semibold px-4 py-2">Material Search</h1>
+        <h1 className="text-2xl font-semibold px-4 py-2 pb-4">Material Search</h1>
         
         <SearchBar
           placeholder="" 
