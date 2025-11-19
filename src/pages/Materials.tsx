@@ -1,4 +1,4 @@
-import { Camera, Filter, Settings } from "lucide-react";
+import { Camera, Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
 import logo from "@/assets/rapid-logo.png";
@@ -11,13 +11,6 @@ import MaterialSearchDialog from "@/components/MaterialSearchDialog";
 import SalesContactDialog from "@/components/SalesContactDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 
 interface Material {
@@ -39,8 +32,6 @@ interface Material {
 }
 
 const Materials = () => {
-  const [selectedManufacturer, setSelectedManufacturer] = useState<string>("all");
-  const [manufacturers, setManufacturers] = useState<string[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
@@ -77,12 +68,6 @@ const Materials = () => {
         
         setAllMaterials(data || []);
         setMaterials(data || []);
-        
-        // Extract unique manufacturers for filter
-        const uniqueManufacturers = Array.from(
-          new Set(data?.map(m => m.manufacturer?.name).filter(Boolean) || [])
-        ).sort();
-        setManufacturers(uniqueManufacturers as string[]);
       } catch (error) {
         console.error('Error fetching materials:', error);
         toast({
@@ -124,11 +109,6 @@ const Materials = () => {
 
     setMaterials(filtered);
   }, [activeSearchQuery, allMaterials]);
-
-  // Filter materials by manufacturer
-  const filteredMaterials = selectedManufacturer === "all" 
-    ? materials 
-    : materials.filter(m => m.manufacturer?.name === selectedManufacturer);
 
   async function handleImageCapture(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -278,39 +258,20 @@ const Materials = () => {
           value={searchQuery}
           onCameraClick={() => fileInputRef.current?.click()}
         />
-        
-        {/* Manufacturer Filter - Show when searching */}
-        {(activeSearchQuery || filteredMaterials.length > 0) && (
-          <div className="px-4 mt-2 flex items-center">
-            <Select value={selectedManufacturer} onValueChange={setSelectedManufacturer}>
-              <SelectTrigger className="w-8 h-8 border-none bg-muted/50 hover:bg-muted p-0">
-                <Filter className="w-4 h-4 mx-auto" />
-              </SelectTrigger>
-              <SelectContent className="bg-popover z-50 text-xs">
-                <SelectItem value="all" className="text-xs">All Manufacturers</SelectItem>
-                {manufacturers.map((manufacturer) => (
-                  <SelectItem key={manufacturer} value={manufacturer} className="text-xs">
-                    {manufacturer}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
       {/* Product List - Only show when there's a search query or active filters */}
-      {(activeSearchQuery || selectedManufacturer !== "all") && (
+      {activeSearchQuery && (
         <div className="px-4 space-y-8 mt-4">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
-          ) : filteredMaterials.length === 0 ? (
+          ) : materials.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {activeSearchQuery ? `No materials found for "${activeSearchQuery}"` : "No materials found."}
             </div>
           ) : (
             // Materials ranked by popularity (purchase_count)
-            filteredMaterials.map((material) => (
+            materials.map((material) => (
               <ProductCard
                 key={material.id}
                 company={material.manufacturer?.name || 'Unknown'}
