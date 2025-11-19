@@ -1,4 +1,4 @@
-import { Camera, Car } from "lucide-react";
+import { Camera, Map } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
@@ -44,7 +44,7 @@ const BottomNav = () => {
             location.pathname === "/route" ? "text-foreground" : "text-muted-foreground"
           }`}
         >
-          <Car className="w-7 h-7" strokeWidth={2} />
+          <Map className="w-7 h-7" strokeWidth={2} />
           <span className="text-xs font-semibold">Route</span>
         </Link>
 
