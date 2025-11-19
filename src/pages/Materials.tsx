@@ -273,7 +273,7 @@ const Materials = () => {
         <h1 className="text-2xl font-semibold px-4 py-2 pb-6">Material Search</h1>
         
         <SearchBar
-          placeholder="" 
+          placeholder="Material Description, Serial Number, Model Number etc." 
           onChange={handleSearchChange}
           value={searchQuery}
           onCameraClick={() => fileInputRef.current?.click()}
