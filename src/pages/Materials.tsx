@@ -47,6 +47,8 @@ const Materials = () => {
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [selectedManufacturerForContact, setSelectedManufacturerForContact] = useState<{ id: string; name: string } | null>(null);
+  const [exactMatch, setExactMatch] = useState<Material | null>(null);
+  const [otherResults, setOtherResults] = useState<Material[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -83,31 +85,54 @@ const Materials = () => {
     fetchMaterials();
   }, [toast]);
 
-  // Apply search filter
+  // Apply search filter with exact match detection
   useEffect(() => {
     if (!activeSearchQuery.trim()) {
       setMaterials(allMaterials);
+      setExactMatch(null);
+      setOtherResults([]);
       return;
     }
 
     const query = activeSearchQuery.toLowerCase().trim();
-    const filtered = allMaterials.filter(material => {
+    
+    // Score each material based on how well it matches
+    const scoredMaterials = allMaterials.map(material => {
       const title = material.title?.toLowerCase() || "";
       const productName = material.product_name?.toLowerCase() || "";
       const serialNumber = material.serial_number?.toLowerCase() || "";
       const modelNumber = material.model_number?.toLowerCase() || "";
       const manufacturerName = material.manufacturer?.name?.toLowerCase() || "";
+      
+      let score = 0;
+      
+      // Exact matches get highest score
+      if (serialNumber === query || modelNumber === query) score = 100;
+      else if (title === query || productName === query) score = 90;
+      // Starts with query gets high score
+      else if (serialNumber.startsWith(query) || modelNumber.startsWith(query)) score = 80;
+      else if (title.startsWith(query) || productName.startsWith(query)) score = 70;
+      // Contains query gets medium score
+      else if (serialNumber.includes(query) || modelNumber.includes(query)) score = 50;
+      else if (title.includes(query) || productName.includes(query)) score = 40;
+      else if (manufacturerName.includes(query)) score = 30;
+      
+      return { material, score };
+    }).filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-      return (
-        title.includes(query) ||
-        productName.includes(query) ||
-        serialNumber.includes(query) ||
-        modelNumber.includes(query) ||
-        manufacturerName.includes(query)
-      );
-    });
-
-    setMaterials(filtered);
+    const filtered = scoredMaterials.map(item => item.material);
+    
+    // If we have a high-scoring match (80+), treat it as exact match
+    if (scoredMaterials.length > 0 && scoredMaterials[0].score >= 80) {
+      setExactMatch(scoredMaterials[0].material);
+      setOtherResults(filtered.slice(1, 21)); // Get up to 20 other results
+      setMaterials(filtered.slice(0, 21)); // Include exact match + others
+    } else {
+      setExactMatch(null);
+      setOtherResults([]);
+      setMaterials(filtered.slice(0, 20)); // Show up to 20 search results
+    }
   }, [activeSearchQuery, allMaterials]);
 
   async function handleImageCapture(event: React.ChangeEvent<HTMLInputElement>) {
@@ -251,45 +276,107 @@ const Materials = () => {
         </div>
       </div>
 
-      {/* Centered Search Section */}
-      <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
-        <h1 className="text-2xl font-semibold mb-8">Material Search</h1>
-        
-        <div className="w-full max-w-2xl">
-          <SearchBar
-            placeholder="Material Description, Serial Number, Model Number etc." 
-            onChange={handleSearchChange}
-            value={searchQuery}
-            onCameraClick={() => fileInputRef.current?.click()}
-          />
+      {/* Search Bar - Only show centered when no search results */}
+      {!activeSearchQuery && (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
+          <h1 className="text-4xl font-bold text-foreground mb-8">Material Search</h1>
+          <div className="w-full max-w-2xl">
+            <SearchBar
+              placeholder="Material Description, Serial Number, Model Number etc."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onCameraClick={() => fileInputRef.current?.click()}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Search Bar - Compact version at top when showing results */}
+      {activeSearchQuery && (
+        <div className="max-w-7xl mx-auto px-4 pt-4">
+          <h1 className="text-4xl font-bold text-foreground mb-6">Material Search</h1>
+          <div className="w-full max-w-2xl mb-8">
+            <SearchBar
+              placeholder="Material Description, Serial Number, Model Number etc."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              onCameraClick={() => fileInputRef.current?.click()}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Product List - Only show when there's a search query or active filters */}
       {activeSearchQuery && (
-        <div className="px-4 space-y-8 mt-4">
+        <div className="px-4 space-y-8 mt-4 pb-24">
           {loading ? (
             <div className="text-center py-8 text-muted-foreground">Loading materials...</div>
           ) : materials.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               {activeSearchQuery ? `No materials found for "${activeSearchQuery}"` : "No materials found."}
             </div>
+          ) : exactMatch ? (
+            // Exact match found - show "We Found Your Material!" section
+            <>
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-foreground mb-6">We Found Your Material!</h2>
+                <ProductCard
+                  key={exactMatch.id}
+                  company={exactMatch.manufacturer?.name || "Unknown"}
+                  logo={exactMatch.manufacturer?.logo_url || ""}
+                  title={exactMatch.title}
+                  product={exactMatch.product_name}
+                  rating={exactMatch.rating}
+                  image={exactMatch.image_url || ""}
+                  dataSheet={exactMatch.datasheet_url}
+                  manufacturerId={exactMatch.manufacturer_id}
+                  onContactClick={() => handleContactClick(exactMatch.manufacturer_id, exactMatch.manufacturer?.name || "Unknown")}
+                />
+              </div>
+              
+              {otherResults.length > 0 && (
+                <div>
+                  <h2 className="text-3xl font-bold text-foreground mb-6">Other Suggestions</h2>
+                  <div className="space-y-8">
+                    {otherResults.map((material) => (
+                      <ProductCard
+                        key={material.id}
+                        company={material.manufacturer?.name || "Unknown"}
+                        logo={material.manufacturer?.logo_url || ""}
+                        title={material.title}
+                        product={material.product_name}
+                        rating={material.rating}
+                        image={material.image_url || ""}
+                        dataSheet={material.datasheet_url}
+                        manufacturerId={material.manufacturer_id}
+                        onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || "Unknown")}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
-            // Materials ranked by popularity (purchase_count)
-            materials.map((material) => (
-              <ProductCard
-                key={material.id}
-                company={material.manufacturer?.name || 'Unknown'}
-                logo={material.manufacturer?.logo_url || ''}
-                title={material.title}
-                product={material.product_name}
-                rating={material.rating}
-                image={material.image_url || ''}
-                dataSheet={material.datasheet_url}
-                manufacturerId={material.manufacturer_id}
-                onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
-              />
-            ))
+            // No exact match - show "Search Results"
+            <>
+              <h2 className="text-3xl font-bold text-foreground mb-6">Search Results</h2>
+              <div className="space-y-8">
+                {materials.map((material) => (
+                  <ProductCard
+                    key={material.id}
+                    company={material.manufacturer?.name || 'Unknown'}
+                    logo={material.manufacturer?.logo_url || ''}
+                    title={material.title}
+                    product={material.product_name}
+                    rating={material.rating}
+                    image={material.image_url || ''}
+                    dataSheet={material.datasheet_url}
+                    manufacturerId={material.manufacturer_id}
+                    onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
