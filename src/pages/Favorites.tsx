@@ -20,10 +20,21 @@ interface FavoriteMaterial {
   rating: number;
 }
 
+interface FavoriteLocation {
+  id: string;
+  name: string;
+  type: string;
+  lat: number;
+  lng: number;
+  operator?: string;
+  field?: string;
+}
+
 const Favorites = () => {
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [favorites, setFavorites] = useState<FavoriteMaterial[]>([]);
+  const [favoriteLocations, setFavoriteLocations] = useState<FavoriteLocation[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,6 +58,7 @@ const Favorites = () => {
   useEffect(() => {
     if (session) {
       fetchFavorites();
+      fetchFavoriteLocations();
     }
   }, [session]);
 
@@ -82,6 +94,36 @@ const Favorites = () => {
     }
   };
 
+  const fetchFavoriteLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("favorite_locations")
+        .select(`
+          location_id,
+          locations (
+            id,
+            name,
+            type,
+            lat,
+            lng,
+            operator,
+            field
+          )
+        `)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      
+      const locationsData = data
+        ?.map((fav: any) => fav.locations)
+        .filter(Boolean) as FavoriteLocation[];
+      
+      setFavoriteLocations(locationsData || []);
+    } catch (error: any) {
+      toast.error("Error loading favorite locations");
+    }
+  };
+
   const removeFavorite = async (materialId: string) => {
     try {
       const { error } = await supabase
@@ -92,6 +134,22 @@ const Favorites = () => {
       if (error) throw error;
       
       setFavorites(favorites.filter(f => f.id !== materialId));
+      toast.success("Removed from favorites");
+    } catch (error: any) {
+      toast.error("Error removing favorite");
+    }
+  };
+
+  const removeFavoriteLocation = async (locationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("favorite_locations")
+        .delete()
+        .eq("location_id", locationId);
+
+      if (error) throw error;
+      
+      setFavoriteLocations(favoriteLocations.filter(f => f.id !== locationId));
       toast.success("Removed from favorites");
     } catch (error: any) {
       toast.error("Error removing favorite");
@@ -130,7 +188,7 @@ const Favorites = () => {
       <div className="px-4 mt-4 space-y-4">
         {loading ? (
           <p className="text-center text-muted-foreground py-8">Loading favorites...</p>
-        ) : favorites.length === 0 ? (
+        ) : favorites.length === 0 && favoriteLocations.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
@@ -141,7 +199,11 @@ const Favorites = () => {
             </CardContent>
           </Card>
         ) : (
-          favorites.map((material) => (
+          <>
+            {favorites.length > 0 && (
+              <>
+                <h2 className="text-lg font-semibold">Materials</h2>
+                {favorites.map((material) => (
             <Card key={material.id}>
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
@@ -172,7 +234,51 @@ const Favorites = () => {
                 </div>
               </CardContent>
             </Card>
-          ))
+                ))}
+              </>
+            )}
+
+            {favoriteLocations.length > 0 && (
+              <>
+                <h2 className="text-lg font-semibold mt-6">Locations</h2>
+                {favoriteLocations.map((location) => (
+                  <Card key={location.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1">
+                          <h3 className="font-semibold">{location.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {location.lat.toFixed(5)}, {location.lng.toFixed(5)}
+                          </p>
+                          {location.operator && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Operator: {location.operator}
+                            </p>
+                          )}
+                          {location.field && (
+                            <p className="text-xs text-muted-foreground">
+                              Field: {location.field}
+                            </p>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Type: {location.type}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeFavoriteLocation(location.id)}
+                          className="text-destructive"
+                        >
+                          <Heart className="w-5 h-5 fill-current" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </>
+            )}
+          </>
         )}
       </div>
 
