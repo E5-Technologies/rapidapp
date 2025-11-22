@@ -135,10 +135,9 @@ const Favorites = () => {
             <CardContent className="py-12 text-center">
               <Heart className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="font-semibold mb-2">No favorites yet</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <p className="text-sm text-muted-foreground">
                 Start adding materials to your favorites
               </p>
-              <Button onClick={() => navigate("/")}>Browse Materials</Button>
             </CardContent>
           </Card>
         ) : (
