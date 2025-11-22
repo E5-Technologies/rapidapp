@@ -36,6 +36,7 @@ const Route = () => {
   const [isRouting, setIsRouting] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distance: number; duration: number } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
   const { toast } = useToast();
 
   // Comprehensive oil and gas well database with coordinates
@@ -208,12 +209,139 @@ const Route = () => {
     setRouteInfo({ distance, duration });
   };
 
-  const handleLocationSelect = (location: WellLocation) => {
+  const handleLocationSelect = async (location: WellLocation) => {
     setSelectedLocation(location);
     setIsRouting(false);
     setRouteInfo(null);
     if (view === "list") {
       setView("map");
+    }
+    
+    // Check if location is already favorited
+    await checkIfFavorited(location);
+  };
+
+  const checkIfFavorited = async (location: WellLocation) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Check if this location exists in user's saved locations
+      const { data: existingLocation } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', location.name)
+        .eq('lat', location.lat)
+        .eq('lng', location.lng)
+        .single();
+
+      if (existingLocation) {
+        // Check if it's favorited
+        const { data: favorite } = await supabase
+          .from('favorite_locations')
+          .select('id')
+          .eq('location_id', existingLocation.id)
+          .eq('user_id', user.id)
+          .single();
+        
+        setIsFavorited(!!favorite);
+      } else {
+        setIsFavorited(false);
+      }
+    } catch (error) {
+      setIsFavorited(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (!selectedLocation) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to save favorites",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // First, ensure the location exists in the locations table
+      const { data: existingLocation, error: searchError } = await supabase
+        .from('locations')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('name', selectedLocation.name)
+        .eq('lat', selectedLocation.lat)
+        .eq('lng', selectedLocation.lng)
+        .maybeSingle();
+
+      let locationId: string;
+
+      if (existingLocation) {
+        locationId = existingLocation.id;
+      } else {
+        // Create the location
+        const { data: newLocation, error: insertError } = await supabase
+          .from('locations')
+          .insert({
+            name: selectedLocation.name,
+            type: selectedLocation.type,
+            lat: selectedLocation.lat,
+            lng: selectedLocation.lng,
+            operator: selectedLocation.operator,
+            field: selectedLocation.field,
+            source: selectedLocation.source,
+            user_id: user.id,
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        locationId = newLocation.id;
+      }
+
+      if (isFavorited) {
+        // Remove from favorites
+        const { error } = await supabase
+          .from('favorite_locations')
+          .delete()
+          .eq('location_id', locationId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+        
+        setIsFavorited(false);
+        toast({
+          title: "Removed from favorites",
+          description: "Location removed from your favorites",
+        });
+      } else {
+        // Add to favorites
+        const { error } = await supabase
+          .from('favorite_locations')
+          .insert({
+            location_id: locationId,
+            user_id: user.id,
+          });
+
+        if (error) throw error;
+        
+        setIsFavorited(true);
+        toast({
+          title: "Added to favorites",
+          description: "Location saved to your favorites",
+        });
+      }
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: "Error",
+        description: "Could not update favorites",
+        variant: "destructive",
+      });
     }
   };
 
@@ -402,11 +530,16 @@ const Route = () => {
               </div>
               
               <div className="flex items-center gap-4 mb-4">
-                <button className="flex flex-col items-center gap-1">
-                  <div className="w-12 h-12 rounded-full border-2 border-border flex items-center justify-center hover:bg-muted/50 transition-colors">
-                    <Star className="w-5 h-5" />
+                <button 
+                  onClick={handleToggleFavorite}
+                  className="flex flex-col items-center gap-1"
+                >
+                  <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center hover:bg-muted/50 transition-colors ${
+                    isFavorited ? 'bg-primary border-primary' : 'border-border'
+                  }`}>
+                    <Star className={`w-5 h-5 ${isFavorited ? 'fill-current text-primary-foreground' : ''}`} />
                   </div>
-                  <span className="text-xs">Favorites</span>
+                  <span className="text-xs">{isFavorited ? 'Favorited' : 'Favorites'}</span>
                 </button>
                 
                 <button className="flex flex-col items-center gap-1">

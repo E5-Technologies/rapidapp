@@ -14,6 +14,35 @@ export type Database = {
   }
   public: {
     Tables: {
+      favorite_locations: {
+        Row: {
+          created_at: string
+          id: string
+          location_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          location_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          location_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "favorite_locations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       favorites: {
         Row: {
           created_at: string
@@ -42,6 +71,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      locations: {
+        Row: {
+          created_at: string
+          field: string | null
+          id: string
+          lat: number
+          lng: number
+          name: string
+          operator: string | null
+          source: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          field?: string | null
+          id?: string
+          lat: number
+          lng: number
+          name: string
+          operator?: string | null
+          source?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          field?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          name?: string
+          operator?: string | null
+          source?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       manufacturers: {
         Row: {
