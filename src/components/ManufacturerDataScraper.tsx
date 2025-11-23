@@ -342,55 +342,9 @@ export const ManufacturerDataScraper = () => {
   const [isScraing, setIsScraping] = useState(false);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<any>(null);
-  const [scrapedUrls, setScrapedUrls] = useState<any[]>([]);
-  const [isFetchingUrls, setIsFetchingUrls] = useState(false);
   const { toast } = useToast();
 
-  const fetchThomasNetUrls = async () => {
-    setIsFetchingUrls(true);
-    setScrapedUrls([]);
-    
-    try {
-      console.log('Fetching manufacturer URLs from ThomasNet...');
-      
-      const { data, error } = await supabase.functions.invoke('scrape-thomasnet-urls', {
-        body: {
-          categories: [
-            'Automation & Electronics',
-            'Process Equipment',
-            'Pumps, Valves & Accessories'
-          ]
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.manufacturers) {
-        setScrapedUrls(data.manufacturers);
-        toast({
-          title: "URLs Fetched Successfully",
-          description: `Found ${data.manufacturers.length} manufacturers across ${data.totalCategories} categories`,
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching ThomasNet URLs:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to fetch URLs",
-        variant: "destructive",
-      });
-    } finally {
-      setIsFetchingUrls(false);
-    }
-  };
-
   const scrapeManufacturers = async () => {
-    const urlsToScrape = scrapedUrls.length > 0 
-      ? scrapedUrls.map(m => m.url)
-      : MANUFACTURER_URLS;
-
     setIsScraping(true);
     setProgress(0);
     setResults(null);
@@ -400,8 +354,8 @@ export const ManufacturerDataScraper = () => {
       const batchSize = 5;
       const batches = [];
       
-      for (let i = 0; i < urlsToScrape.length; i += batchSize) {
-        batches.push(urlsToScrape.slice(i, i + batchSize));
+      for (let i = 0; i < MANUFACTURER_URLS.length; i += batchSize) {
+        batches.push(MANUFACTURER_URLS.slice(i, i + batchSize));
       }
 
       let allResults: any[] = [];
@@ -439,14 +393,14 @@ export const ManufacturerDataScraper = () => {
       }
 
       setResults({
-        totalProcessed: urlsToScrape.length,
+        totalProcessed: MANUFACTURER_URLS.length,
         productsFound: allResults.length,
         results: allResults,
       });
 
       toast({
         title: "Scraping Complete",
-        description: `Processed ${urlsToScrape.length} manufacturers, found ${allResults.length} products`,
+        description: `Processed ${MANUFACTURER_URLS.length} manufacturers, found ${allResults.length} products`,
       });
 
     } catch (error) {
@@ -465,90 +419,33 @@ export const ManufacturerDataScraper = () => {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Manufacturer Data Scraper</h2>
+        <p className="text-muted-foreground">
+          This tool will scrape product information and images from {MANUFACTURER_URLS.length} top manufacturer websites 
+          across 6 categories (50 per category) and update the materials database.
+        </p>
+        <div className="grid grid-cols-3 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
+          <div><span className="font-medium">Valves:</span> {VALVE_MANUFACTURERS.length}</div>
+          <div><span className="font-medium">Pumps:</span> {PUMP_MANUFACTURERS.length}</div>
+          <div><span className="font-medium">Piping:</span> {PIPING_MANUFACTURERS.length}</div>
+          <div><span className="font-medium">Instrumentation:</span> {INSTRUMENTATION_MANUFACTURERS.length}</div>
+          <div><span className="font-medium">Electrical:</span> {ELECTRICAL_MANUFACTURERS.length}</div>
+          <div><span className="font-medium">Vessels:</span> {VESSEL_MANUFACTURERS.length}</div>
+        </div>
         
-        {/* ThomasNet URL Scraper Section */}
-        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-3">
-          <h3 className="text-lg font-semibold">Step 1: Fetch URLs from ThomasNet</h3>
-          <p className="text-sm text-muted-foreground">
-            Scrape manufacturer URLs from ThomasNet for these categories:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <span className="px-3 py-1 bg-primary/10 rounded-full text-sm">Automation & Electronics</span>
-            <span className="px-3 py-1 bg-primary/10 rounded-full text-sm">Process Equipment</span>
-            <span className="px-3 py-1 bg-primary/10 rounded-full text-sm">Pumps, Valves & Accessories</span>
-          </div>
-          
-          <Button 
-            onClick={fetchThomasNetUrls} 
-            disabled={isFetchingUrls}
-            className="w-full"
-            variant="outline"
-          >
-            {isFetchingUrls ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Fetching URLs from ThomasNet...
-              </>
-            ) : (
-              "Fetch Manufacturer URLs"
-            )}
-          </Button>
-
-          {scrapedUrls.length > 0 && (
-            <div className="mt-3 p-3 bg-card rounded border">
-              <p className="text-sm font-medium text-green-600">
-                ✓ Found {scrapedUrls.length} manufacturers
-              </p>
-              <div className="mt-2 max-h-40 overflow-y-auto space-y-1">
-                {scrapedUrls.map((mfg, idx) => (
-                  <div key={idx} className="text-xs text-muted-foreground">
-                    {mfg.category}: {mfg.name}
-                  </div>
-                ))}
-              </div>
-            </div>
+        <Button 
+          onClick={scrapeManufacturers} 
+          disabled={isScraing}
+          className="w-full"
+        >
+          {isScraing ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Scraping Manufacturers...
+            </>
+          ) : (
+            `Scrape ${MANUFACTURER_URLS.length} Manufacturers`
           )}
-        </div>
-
-        {/* Existing Scraper Section */}
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold">
-            Step 2: Scrape Product Data
-            {scrapedUrls.length > 0 && " (Using ThomasNet URLs)"}
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            {scrapedUrls.length > 0 
-              ? `Scrape product information from ${scrapedUrls.length} ThomasNet manufacturers`
-              : `Or use ${MANUFACTURER_URLS.length} pre-configured manufacturer websites across 6 categories`
-            }
-          </p>
-          
-          {scrapedUrls.length === 0 && (
-            <div className="grid grid-cols-3 gap-2 text-sm bg-muted/50 p-3 rounded-lg">
-              <div><span className="font-medium">Valves:</span> {VALVE_MANUFACTURERS.length}</div>
-              <div><span className="font-medium">Pumps:</span> {PUMP_MANUFACTURERS.length}</div>
-              <div><span className="font-medium">Piping:</span> {PIPING_MANUFACTURERS.length}</div>
-              <div><span className="font-medium">Instrumentation:</span> {INSTRUMENTATION_MANUFACTURERS.length}</div>
-              <div><span className="font-medium">Electrical:</span> {ELECTRICAL_MANUFACTURERS.length}</div>
-              <div><span className="font-medium">Vessels:</span> {VESSEL_MANUFACTURERS.length}</div>
-            </div>
-          )}
-          
-          <Button 
-            onClick={scrapeManufacturers} 
-            disabled={isScraing}
-            className="w-full"
-          >
-            {isScraing ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Scraping Manufacturers...
-              </>
-            ) : (
-              `Scrape ${scrapedUrls.length > 0 ? scrapedUrls.length : MANUFACTURER_URLS.length} Manufacturers`
-            )}
-          </Button>
-        </div>
+        </Button>
 
         {isScraing && (
           <div className="space-y-2">

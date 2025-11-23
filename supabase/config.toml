@@ -5,6 +5,3 @@ verify_jwt = false
 
 [functions.update-material-rankings]
 verify_jwt = true
-
-[functions.scrape-thomasnet-urls]
-verify_jwt = true
