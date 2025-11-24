@@ -74,51 +74,97 @@ serve(async (req) => {
 
     console.log('Searching for material:', query);
 
-    // Search the web for the material using Serper
-    const searchQuery = `${query} oil gas industry material data sheet specifications`;
-    const serperResponse = await fetch('https://google.serper.dev/search', {
+    // Define ThomasNet categories to search
+    const thomasnetCategories = [
+      'automation-electronics',
+      'process-equipment',
+      'pumps-valves-accessories'
+    ];
+
+    // Search ThomasNet across all categories
+    const thomasnetSearches = thomasnetCategories.map(category => {
+      const categoryQuery = `site:thomasnet.com/products/${category} ${query}`;
+      return fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': SERPER_API_KEY,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: categoryQuery,
+          num: 10,
+        }),
+      });
+    });
+
+    // Also do a general ThomasNet search
+    const generalThomasnetSearch = fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: {
         'X-API-KEY': SERPER_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        q: searchQuery,
-        num: 10,
+        q: `site:thomasnet.com ${query}`,
+        num: 20,
       }),
     });
 
-    if (!serperResponse.ok) {
-      throw new Error(`Serper API error: ${serperResponse.status}`);
+    const allSearches = [...thomasnetSearches, generalThomasnetSearch];
+    const responses = await Promise.all(allSearches);
+
+    // Check if all responses are ok
+    for (const response of responses) {
+      if (!response.ok) {
+        throw new Error(`Serper API error: ${response.status}`);
+      }
     }
 
-    const searchResults = await serperResponse.json();
-    console.log('Search results received:', searchResults);
+    const searchResultsArray = await Promise.all(responses.map(r => r.json()));
+    
+    // Combine all search results
+    const allOrganicResults = searchResultsArray.flatMap(results => results.organic || []);
+    
+    // Deduplicate by URL
+    const uniqueResults = Array.from(
+      new Map(allOrganicResults.map(item => [item.link, item])).values()
+    );
 
-    // Use AI to extract relevant information
-    const aiPrompt = `Analyze these search results for the oil and gas material with serial/model number "${query}". 
+    console.log(`Found ${uniqueResults.length} unique ThomasNet results`);
 
-Search Results:
-${JSON.stringify(searchResults, null, 2)}
+    // Use AI to extract material information from ThomasNet results
+    const aiPrompt = `Analyze these ThomasNet search results for materials matching "${query}". 
 
-Extract and return ONLY valid JSON with this exact structure (no markdown, no extra text):
-{
-  "manufacturer": "manufacturer name",
-  "productName": "full product name",
-  "modelNumber": "${query}",
-  "imageUrl": "direct image URL if found",
-  "datasheetUrl": "datasheet PDF URL if found",
-  "specifications": ["key spec 1", "key spec 2"],
-  "description": "brief product description",
-  "salesContact": {
-    "region": "${userLocation || 'Global'}",
-    "phone": "contact number if found",
-    "email": "contact email if found",
-    "website": "manufacturer website"
+Search Results from ThomasNet:
+${JSON.stringify(uniqueResults.slice(0, 30), null, 2)}
+
+Extract and return at least 20 materials. Return ONLY valid JSON array (no markdown, no extra text) with this structure:
+[
+  {
+    "manufacturer": "manufacturer name from result",
+    "productName": "product name from title/snippet",
+    "modelNumber": "model number if found, otherwise use product identifier",
+    "category": "which category: Automation & Electronics, Process Equipment, or Pumps Valves & Accessories",
+    "imageUrl": null,
+    "datasheetUrl": "link to product page or datasheet",
+    "specifications": ["extract key specs from snippet"],
+    "description": "extract product description from snippet",
+    "salesContact": {
+      "region": "${userLocation || 'Global'}",
+      "phone": null,
+      "email": null,
+      "website": "manufacturer website from link"
+    }
   }
-}
+]
 
-If information is not found, use null for that field. Return ONLY the JSON object.`;
+IMPORTANT: 
+- Return AT LEAST 20 material entries if possible from the results provided
+- Extract manufacturer name from the URL or title
+- Use the ThomasNet product page as the datasheetUrl
+- Categorize based on the URL path (automation-electronics, process-equipment, or pumps-valves-accessories)
+- If fewer than 20 results exist, return all available results
+- Return ONLY the JSON array.`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -151,35 +197,49 @@ If information is not found, use null for that field. Return ONLY the JSON objec
       // Remove markdown code blocks if present
       const cleanedInfo = extractedInfo.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
       parsedInfo = JSON.parse(cleanedInfo);
+      
+      // Ensure we have an array
+      if (!Array.isArray(parsedInfo)) {
+        parsedInfo = [parsedInfo];
+      }
+      
+      console.log(`Parsed ${parsedInfo.length} materials from AI response`);
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
-      // Return a basic structure if parsing fails
-      parsedInfo = {
-        manufacturer: 'Unknown',
-        productName: query,
-        modelNumber: query,
+      console.error('Raw AI response:', extractedInfo);
+      
+      // Return basic structures from raw search results if parsing fails
+      parsedInfo = uniqueResults.slice(0, 20).map((result: any) => ({
+        manufacturer: result.link.includes('thomasnet.com') ? 
+          result.link.split('/')[4]?.replace(/-/g, ' ') || 'Unknown' : 'Unknown',
+        productName: result.title,
+        modelNumber: null,
+        category: result.link.includes('automation-electronics') ? 'Automation & Electronics' :
+                  result.link.includes('process-equipment') ? 'Process Equipment' :
+                  result.link.includes('pumps-valves-accessories') ? 'Pumps Valves & Accessories' : 'General',
         imageUrl: null,
-        datasheetUrl: null,
+        datasheetUrl: result.link,
         specifications: [],
-        description: 'Material information extracted from web search.',
+        description: result.snippet || 'Material information from ThomasNet',
         salesContact: {
           region: userLocation || 'Global',
           phone: null,
           email: null,
-          website: searchResults.organic?.[0]?.link || null
+          website: result.link
         }
-      };
+      }));
     }
 
-    // Add raw search results for reference
-    parsedInfo.searchResults = searchResults.organic?.slice(0, 5).map((result: any) => ({
-      title: result.title,
-      link: result.link,
-      snippet: result.snippet
-    }));
+    // Add metadata
+    const responseData = {
+      materials: parsedInfo,
+      totalResults: parsedInfo.length,
+      source: 'thomasnet.com',
+      categories: ['Automation & Electronics', 'Process Equipment', 'Pumps Valves & Accessories']
+    };
 
     return new Response(
-      JSON.stringify(parsedInfo),
+      JSON.stringify(responseData),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
