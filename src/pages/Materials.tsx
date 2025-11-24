@@ -240,8 +240,74 @@ const Materials = () => {
     setSearchQuery(value);
   };
 
-  const handleSearchSubmit = () => {
+  const handleSearchSubmit = async () => {
     setActiveSearchQuery(searchQuery);
+    
+    // If search query is present, also call the ThomasNet search edge function
+    if (searchQuery.trim()) {
+      setIsSearching(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('search-material', {
+          body: { 
+            query: searchQuery.trim(),
+            userLocation: "Gulf Coast"
+          }
+        });
+
+        if (error) {
+          console.error("Error searching ThomasNet:", error);
+          toast({
+            title: "Search Warning",
+            description: "Using local database results only.",
+            variant: "default",
+          });
+          return;
+        }
+
+        console.log("ThomasNet search results:", data);
+        
+        // Handle the response with multiple materials from ThomasNet
+        if (data && data.materials && Array.isArray(data.materials)) {
+          const thomasnetMaterials = data.materials.map((material: any, index: number) => ({
+            id: `thomasnet-${Date.now()}-${index}`,
+            title: material.productName || searchQuery,
+            category: material.category || "ThomasNet Material",
+            product_name: material.productName || searchQuery,
+            model_number: material.modelNumber,
+            serial_number: searchQuery,
+            image_url: material.imageUrl,
+            datasheet_url: material.datasheetUrl,
+            rating: 0,
+            purchase_count: 0,
+            manufacturer_id: `thomasnet-${material.manufacturer}`,
+            manufacturer: {
+              name: material.manufacturer || "Unknown",
+              logo_url: null,
+            },
+          }));
+          
+          console.log(`Loaded ${thomasnetMaterials.length} materials from ThomasNet`);
+          
+          // Merge ThomasNet results with local database results
+          // ThomasNet results come first, then local matches
+          setAllMaterials([...thomasnetMaterials, ...allMaterials]);
+          
+          toast({
+            title: "Search Complete",
+            description: `Found ${thomasnetMaterials.length} materials from ThomasNet`,
+          });
+        }
+      } catch (error) {
+        console.error("Error in ThomasNet search:", error);
+        toast({
+          title: "Search Warning",
+          description: "Using local database results only.",
+          variant: "default",
+        });
+      } finally {
+        setIsSearching(false);
+      }
+    }
   };
 
   const handleContactClick = (manufacturerId: string, manufacturerName: string) => {
