@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 
 // Top 50 Valve Manufacturers
 const VALVE_MANUFACTURERS = [
-  "https://www.emerson.com",
+  "https://www.emerson.com/en-us",
   "https://www.flowserve.com",
   "https://www.ksb.com",
   "https://www.slb.com/cameron",
