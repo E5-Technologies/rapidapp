@@ -95,30 +95,106 @@ serve(async (req) => {
     const searchResults = await serperResponse.json();
     console.log('Search results received:', searchResults);
 
-    // Use AI to extract relevant information
-    const aiPrompt = `Analyze these search results for the oil and gas material with serial/model number "${query}". 
+    // Scrape the top product pages directly
+    const scrapedProducts = [];
+    const urlsToScrape = searchResults.organic?.slice(0, 5) || [];
+    
+    for (const result of urlsToScrape) {
+      try {
+        console.log('Scraping URL:', result.link);
+        const pageResponse = await fetch(result.link, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        if (pageResponse.ok) {
+          const html = await pageResponse.text();
+          
+          // Use AI to extract product information from the scraped HTML
+          const extractPrompt = `Extract product information from this HTML page for "${query}":
 
-Search Results:
-${JSON.stringify(searchResults, null, 2)}
+HTML Content (truncated to 8000 chars):
+${html.substring(0, 8000)}
 
-Extract and return ONLY valid JSON with this exact structure (no markdown, no extra text):
+Source URL: ${result.link}
+
+Extract and return ONLY valid JSON (no markdown, no extra text):
 {
-  "manufacturer": "manufacturer name",
+  "manufacturer": "manufacturer name from page",
   "productName": "full product name",
-  "modelNumber": "${query}",
-  "imageUrl": "direct image URL if found",
-  "datasheetUrl": "datasheet PDF URL if found",
-  "specifications": ["key spec 1", "key spec 2"],
-  "description": "brief product description",
-  "salesContact": {
-    "region": "${userLocation || 'Global'}",
-    "phone": "contact number if found",
-    "email": "contact email if found",
-    "website": "manufacturer website"
-  }
+  "modelNumber": "model/part number",
+  "imageUrl": "product image URL if found",
+  "datasheetUrl": "datasheet/spec PDF URL if found",
+  "specifications": ["spec 1", "spec 2"],
+  "description": "product description",
+  "category": "product category (Valves/Pumps/Piping/Instrumentation/etc)",
+  "sourceUrl": "${result.link}"
 }
 
-If information is not found, use null for that field. Return ONLY the JSON object.`;
+Return null fields for missing info. Return ONLY the JSON object.`;
+
+          const extractResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'google/gemini-2.5-flash',
+              messages: [{ role: 'user', content: extractPrompt }],
+            }),
+          });
+
+          if (extractResponse.ok) {
+            const extractData = await extractResponse.json();
+            const extracted = extractData.choices[0].message.content;
+            try {
+              const cleanedExtract = extracted.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+              const productInfo = JSON.parse(cleanedExtract);
+              if (productInfo.productName) {
+                scrapedProducts.push(productInfo);
+                console.log('Successfully extracted product:', productInfo.productName);
+              }
+            } catch (parseErr) {
+              console.error('Failed to parse extracted product:', parseErr);
+            }
+          }
+        }
+      } catch (scrapeError) {
+        console.error('Error scraping URL:', result.link, scrapeError);
+      }
+    }
+
+    // Use AI to compile the best results and match to the search query
+    const finalPrompt = `Based on these scraped products and the search query "${query}", identify the best matches:
+
+Scraped Products:
+${JSON.stringify(scrapedProducts, null, 2)}
+
+Original Search Results:
+${JSON.stringify(searchResults.organic?.slice(0, 3), null, 2)}
+
+Return ONLY valid JSON (no markdown):
+{
+  "manufacturer": "best matching manufacturer",
+  "productName": "best matching product name",
+  "modelNumber": "${query}",
+  "imageUrl": "product image URL",
+  "datasheetUrl": "datasheet URL",
+  "specifications": ["key specs"],
+  "description": "product description",
+  "category": "Valves/Pumps/Piping/etc",
+  "salesContact": {
+    "region": "${userLocation || 'Global'}",
+    "phone": "contact if found",
+    "email": "email if found",
+    "website": "manufacturer website"
+  },
+  "alternativeProducts": [list of other matching products from scraped data]
+}
+
+Use null for missing fields. Return ONLY the JSON object.`;
 
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -129,7 +205,7 @@ If information is not found, use null for that field. Return ONLY the JSON objec
       body: JSON.stringify({
         model: 'google/gemini-2.5-flash',
         messages: [
-          { role: 'user', content: aiPrompt }
+          { role: 'user', content: finalPrompt }
         ],
       }),
     });
