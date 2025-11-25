@@ -74,8 +74,8 @@ serve(async (req) => {
 
     console.log('Searching for material:', query);
 
-    // Search the web for the material using Serper
-    const searchQuery = `${query} oil gas industry material data sheet specifications`;
+    // Search specifically on thomasnet.com and emerson.com for comprehensive product coverage
+    const searchQuery = `${query} site:thomasnet.com OR site:emerson.com/en-us (automation electronics OR process equipment OR pumps valves accessories) product specifications`;
     const serperResponse = await fetch('https://google.serper.dev/search', {
       method: 'POST',
       headers: {
@@ -84,7 +84,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         q: searchQuery,
-        num: 10,
+        num: 20,
       }),
     });
 
