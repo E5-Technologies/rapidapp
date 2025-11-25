@@ -126,12 +126,12 @@ const Materials = () => {
     // If we have a high-scoring match (80+), treat it as exact match
     if (scoredMaterials.length > 0 && scoredMaterials[0].score >= 80) {
       setExactMatch(scoredMaterials[0].material);
-      setOtherResults(filtered.slice(1, 20)); // Get at least 19 other results to reach 20 total
-      setMaterials(filtered.slice(0, 20)); // Include exact match + others (20 total)
+      setOtherResults(filtered.slice(1, 21)); // Get up to 20 other results
+      setMaterials(filtered.slice(0, 21)); // Include exact match + others
     } else {
       setExactMatch(null);
       setOtherResults([]);
-      setMaterials(filtered.slice(0, 20)); // Show at least 20 search results
+      setMaterials(filtered.slice(0, 20)); // Show up to 20 search results
     }
   }, [activeSearchQuery, allMaterials]);
 
