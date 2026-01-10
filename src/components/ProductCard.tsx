@@ -85,6 +85,41 @@ const resolveLogo = (logoPath: string | null | undefined, companyName: string): 
   return null;
 };
 
+// Category-specific product images from real industrial sources
+const categoryImages: Record<string, string> = {
+  "Valves": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
+  "Pumps": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=400&h=300&fit=crop",
+  "Instrumentation": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
+  "Electrical": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+  "Piping": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Vessels": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=400&h=300&fit=crop",
+  "Safety": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=400&h=300&fit=crop",
+  "Tanks": "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=300&fit=crop",
+  "Automation": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=300&fit=crop",
+};
+
+// Get appropriate image for a product
+const getProductImage = (image: string | null, category: string, title: string): string | null => {
+  // If valid custom image URL exists (not the placeholder), use it
+  if (image && !image.includes('unsplash.com/photo-1581092918056') && image.startsWith('http')) {
+    return image;
+  }
+  
+  // Use category-specific image
+  if (category && categoryImages[category]) {
+    return categoryImages[category];
+  }
+  
+  // Try to match category from title
+  for (const [cat, url] of Object.entries(categoryImages)) {
+    if (title.toLowerCase().includes(cat.toLowerCase().slice(0, -1))) {
+      return url;
+    }
+  }
+  
+  return null;
+};
+
 interface ProductCardProps {
   company: string;
   logo: string;
@@ -94,12 +129,13 @@ interface ProductCardProps {
   image: string;
   dataSheet?: string | null;
   manufacturerId?: string;
+  category?: string;
   onContactClick?: () => void;
 }
 
-const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, onContactClick }: ProductCardProps) => {
+const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category, onContactClick }: ProductCardProps) => {
   const resolvedLogo = resolveLogo(logo, company);
-  const hasValidImage = image && !image.includes('unsplash.com/photo-1581092918056');
+  const productImage = getProductImage(image, category || '', title);
   
   return (
     <div className="bg-card rounded-2xl p-4 space-y-3">
@@ -131,14 +167,21 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       <div>
         <h4 className="font-medium text-xs text-muted-foreground mb-2">{title}</h4>
         <div className="relative mb-3">
-          {hasValidImage ? (
+          {productImage ? (
             <img 
-              src={image} 
+              src={productImage} 
               alt={product} 
               className="w-full h-40 object-cover rounded-lg"
               onError={(e) => {
-                e.currentTarget.style.display = 'none';
-                e.currentTarget.parentElement?.classList.add('bg-muted');
+                const target = e.currentTarget;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const fallback = document.createElement('div');
+                  fallback.className = 'w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2';
+                  fallback.innerHTML = '<span class="text-xs text-muted-foreground">Product Image</span>';
+                  parent.insertBefore(fallback, target);
+                }
               }}
             />
           ) : (

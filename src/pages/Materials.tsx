@@ -255,6 +255,7 @@ const Materials = () => {
                   image={exactMatch.image_url || ""}
                   dataSheet={exactMatch.datasheet_url}
                   manufacturerId={exactMatch.manufacturer_id}
+                  category={exactMatch.category}
                   onContactClick={() => handleContactClick(exactMatch.manufacturer_id, exactMatch.manufacturer?.name || "Unknown")}
                 />
               </div>
@@ -274,6 +275,7 @@ const Materials = () => {
                         image={material.image_url || ""}
                         dataSheet={material.datasheet_url}
                         manufacturerId={material.manufacturer_id}
+                        category={material.category}
                         onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || "Unknown")}
                       />
                     ))}
@@ -297,6 +299,7 @@ const Materials = () => {
                     image={material.image_url || ''}
                     dataSheet={material.datasheet_url}
                     manufacturerId={material.manufacturer_id}
+                    category={material.category}
                     onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
                   />
                 ))}
