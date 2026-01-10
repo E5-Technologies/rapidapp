@@ -12,6 +12,7 @@ import Favorites from "./pages/Favorites";
 import Scraper from "./pages/Scraper";
 import Auth from "./pages/Auth";
 import Settings from "./pages/Settings";
+import EquipmentFinder from "./pages/EquipmentFinder";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
           <Route path="/favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
           <Route path="/scraper" element={<ProtectedRoute><Scraper /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/equipment" element={<ProtectedRoute><EquipmentFinder /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
