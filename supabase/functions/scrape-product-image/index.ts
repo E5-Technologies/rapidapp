@@ -34,11 +34,11 @@ serve(async (req) => {
       );
     }
 
-    console.log('Searching for product images:', manufacturerName, productName);
+    console.log('Searching DirectIndustry for product images:', manufacturerName, productName);
 
     try {
-      // Use Firecrawl search to find product images
-      const searchQuery = `${manufacturerName} ${productName} product image`;
+      // Search DirectIndustry specifically for product images
+      const searchQuery = `site:pdf.directindustry.com ${manufacturerName} ${productName}`;
       
       const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
         method: 'POST',
@@ -58,34 +58,39 @@ serve(async (req) => {
       const searchData = await searchResponse.json();
 
       if (!searchResponse.ok || !searchData.success) {
-        console.log('Firecrawl search returned error:', searchData?.error || searchData?.code);
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            imageUrls: [], 
-            allLinks: [],
-            source: 'search-failed'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        console.log('DirectIndustry search returned error:', searchData?.error || searchData?.code);
+        // Fallback to general web search
+        return await fallbackSearch(apiKey, manufacturerName, productName);
       }
 
       // Extract image URLs from search results
       const imageUrls: string[] = [];
       const results = searchData.data || [];
       
+      console.log('DirectIndustry results found:', results.length);
+
       for (const result of results) {
         // Check markdown content for image references
         const markdown = result.markdown || '';
-        const imageRegex = /!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|webp|gif)[^\s)]*)\)/gi;
+        
+        // Look for DirectIndustry image patterns
+        const directIndustryImageRegex = /(https?:\/\/[^\s"'<>]*directindustry[^\s"'<>]*\.(jpg|jpeg|png|webp|gif)(\?[^\s"'<>]*)?)/gi;
         let match;
+        while ((match = directIndustryImageRegex.exec(markdown)) !== null) {
+          if (match[1] && !imageUrls.includes(match[1])) {
+            imageUrls.push(match[1]);
+          }
+        }
+
+        // Also look for any image URLs in the content
+        const imageRegex = /!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|webp|gif)[^\s)]*)\)/gi;
         while ((match = imageRegex.exec(markdown)) !== null) {
           if (match[1] && !imageUrls.includes(match[1])) {
             imageUrls.push(match[1]);
           }
         }
         
-        // Also check for raw image URLs in content
+        // Raw image URLs in content
         const urlRegex = /(https?:\/\/[^\s"'<>]+\.(jpg|jpeg|png|webp)(\?[^\s"'<>]*)?)/gi;
         while ((match = urlRegex.exec(markdown)) !== null) {
           if (match[1] && !imageUrls.includes(match[1])) {
@@ -105,17 +110,24 @@ serve(async (req) => {
         }
       }
 
-      console.log('Found image URLs:', imageUrls.length);
+      console.log('Found DirectIndustry image URLs:', imageUrls.length);
 
-      // Filter to prioritize manufacturer-specific images
+      // If no images found from DirectIndustry, try general search
+      if (imageUrls.length === 0) {
+        console.log('No DirectIndustry images, falling back to general search');
+        return await fallbackSearch(apiKey, manufacturerName, productName);
+      }
+
+      // Prioritize manufacturer-specific images
       const manufacturerLower = manufacturerName.toLowerCase();
-      const productLower = productName.toLowerCase();
+      const productLower = productName.toLowerCase().split(' ')[0];
       
       const prioritizedImages = imageUrls.filter(url => {
         const lower = url.toLowerCase();
         return lower.includes(manufacturerLower) || 
-               lower.includes(productLower.split(' ')[0]) ||
-               lower.includes('product');
+               lower.includes(productLower) ||
+               lower.includes('product') ||
+               lower.includes('catalog');
       });
 
       const finalImages = prioritizedImages.length > 0 
@@ -127,13 +139,13 @@ serve(async (req) => {
           success: true,
           imageUrls: finalImages,
           allLinks: imageUrls.slice(0, 10),
-          source: 'search'
+          source: 'directindustry'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
     } catch (fetchError) {
-      console.log('Fetch error, returning empty result:', fetchError instanceof Error ? fetchError.message : 'Unknown error');
+      console.log('Fetch error:', fetchError instanceof Error ? fetchError.message : 'Unknown error');
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -158,3 +170,91 @@ serve(async (req) => {
     );
   }
 });
+
+// Fallback to general web search if DirectIndustry doesn't have results
+async function fallbackSearch(apiKey: string, manufacturerName: string, productName: string) {
+  try {
+    console.log('Performing fallback web search for:', manufacturerName, productName);
+    
+    const searchQuery = `${manufacturerName} ${productName} industrial product image`;
+    
+    const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: searchQuery,
+        limit: 5,
+        scrapeOptions: {
+          formats: ['markdown', 'links']
+        }
+      }),
+    });
+
+    const searchData = await searchResponse.json();
+
+    if (!searchResponse.ok || !searchData.success) {
+      console.log('Fallback search failed:', searchData?.error);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          imageUrls: [], 
+          allLinks: [],
+          source: 'fallback-failed'
+        }),
+        { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const imageUrls: string[] = [];
+    const results = searchData.data || [];
+    
+    for (const result of results) {
+      const markdown = result.markdown || '';
+      
+      // Extract image URLs
+      const urlRegex = /(https?:\/\/[^\s"'<>]+\.(jpg|jpeg|png|webp)(\?[^\s"'<>]*)?)/gi;
+      let match;
+      while ((match = urlRegex.exec(markdown)) !== null) {
+        if (match[1] && !imageUrls.includes(match[1])) {
+          imageUrls.push(match[1]);
+        }
+      }
+
+      const links = result.links || [];
+      for (const link of links) {
+        const lower = link.toLowerCase();
+        if ((lower.includes('.jpg') || lower.includes('.jpeg') || 
+             lower.includes('.png') || lower.includes('.webp')) &&
+            !imageUrls.includes(link)) {
+          imageUrls.push(link);
+        }
+      }
+    }
+
+    console.log('Fallback found images:', imageUrls.length);
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        imageUrls: imageUrls.slice(0, 3),
+        allLinks: imageUrls.slice(0, 10),
+        source: 'fallback-search'
+      }),
+      { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } }
+    );
+  } catch (error) {
+    console.log('Fallback error:', error);
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        imageUrls: [], 
+        allLinks: [],
+        source: 'fallback-error'
+      }),
+      { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } }
+    );
+  }
+}
