@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ExternalLink, Phone, Mail, Camera, Upload, X } from "lucide-react";
+import { Loader2, ExternalLink, Phone, Mail, Camera, Upload, X, CheckCircle2, Image } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -30,6 +30,10 @@ interface IdentificationResult {
   features: string[];
   description?: string;
   searchTerms: string[];
+  productImage?: string;
+  imageMatchConfidence?: number;
+  matchDetails?: string;
+  modelNumber?: string;
 }
 
 interface EquipmentIdentifierDialogProps {
@@ -49,6 +53,8 @@ const EquipmentIdentifierDialog = ({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [identification, setIdentification] = useState<IdentificationResult | null>(null);
   const [matchedSuppliers, setMatchedSuppliers] = useState<EquipmentSupplier[]>([]);
+  const [scrapedImages, setScrapedImages] = useState<string[]>([]);
+  const [catalogUrl, setCatalogUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialImage && open) {
@@ -63,6 +69,8 @@ const EquipmentIdentifierDialog = ({
       setCapturedImage(null);
       setIdentification(null);
       setMatchedSuppliers([]);
+      setScrapedImages([]);
+      setCatalogUrl(null);
       setIsAnalyzing(false);
     }
   }, [open]);
@@ -98,6 +106,8 @@ const EquipmentIdentifierDialog = ({
     setIsAnalyzing(true);
     setIdentification(null);
     setMatchedSuppliers([]);
+    setScrapedImages([]);
+    setCatalogUrl(null);
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -120,6 +130,8 @@ const EquipmentIdentifierDialog = ({
       const result = response.data;
       setIdentification(result.identification);
       setMatchedSuppliers(result.matchedSuppliers || []);
+      setScrapedImages(result.scrapedImages || []);
+      setCatalogUrl(result.catalogUrl || null);
       
       if (result.identification?.confidence > 70) {
         toast.success(`Identified: ${result.identification.type}`);
@@ -138,6 +150,8 @@ const EquipmentIdentifierDialog = ({
     setCapturedImage(null);
     setIdentification(null);
     setMatchedSuppliers([]);
+    setScrapedImages([]);
+    setCatalogUrl(null);
   };
 
   const SupplierCard = ({ supplier }: { supplier: EquipmentSupplier }) => (
@@ -228,11 +242,11 @@ const EquipmentIdentifierDialog = ({
               </Card>
             )}
 
-            {/* Captured Image */}
+            {/* Image Comparison */}
             {capturedImage && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Captured Image</h3>
+                  <h3 className="font-semibold text-sm">Image Comparison</h3>
                   {!isAnalyzing && (
                     <Button variant="ghost" size="sm" onClick={clearIdentification}>
                       <X className="w-4 h-4 mr-1" />
@@ -240,19 +254,61 @@ const EquipmentIdentifierDialog = ({
                     </Button>
                   )}
                 </div>
-                <img 
-                  src={capturedImage} 
-                  alt="Captured equipment" 
-                  className="w-full h-48 object-cover rounded-lg"
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Your Photo</p>
+                    <img 
+                      src={capturedImage} 
+                      alt="Captured equipment" 
+                      className="w-full h-36 object-cover rounded-lg border-2 border-primary"
+                    />
+                  </div>
+                  {identification?.productImage ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1">
+                        <p className="text-xs text-muted-foreground">Matched Product</p>
+                        {identification.imageMatchConfidence && identification.imageMatchConfidence > 60 && (
+                          <CheckCircle2 className="w-3 h-3 text-green-500" />
+                        )}
+                      </div>
+                      <img 
+                        src={identification.productImage} 
+                        alt="Matched product" 
+                        className="w-full h-36 object-cover rounded-lg border-2 border-green-500"
+                      />
+                      {identification.imageMatchConfidence && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          {identification.imageMatchConfidence}% visual match
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Catalog Match</p>
+                      <div className="w-full h-36 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
+                        {isAnalyzing ? (
+                          <div className="flex flex-col items-center gap-2">
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">Searching catalogs...</p>
+                          </div>
+                        ) : (
+                          <Image className="w-8 h-8 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Analysis Status */}
             {isAnalyzing && (
-              <div className="flex flex-col items-center justify-center py-8 space-y-3">
+              <div className="flex flex-col items-center justify-center py-6 space-y-3">
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
-                <p className="text-muted-foreground">Analyzing equipment with AI...</p>
+                <div className="text-center">
+                  <p className="font-medium">Analyzing Equipment...</p>
+                  <p className="text-sm text-muted-foreground">Searching manufacturer catalogs for matching products</p>
+                </div>
               </div>
             )}
 
@@ -296,7 +352,19 @@ const EquipmentIdentifierDialog = ({
                           <p className="font-medium">{identification.size}</p>
                         </div>
                       )}
+                      {identification.modelNumber && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Model</span>
+                          <p className="font-medium">{identification.modelNumber}</p>
+                        </div>
+                      )}
                     </div>
+
+                    {identification.matchDetails && (
+                      <div className="pt-2 border-t">
+                        <p className="text-xs text-muted-foreground">{identification.matchDetails}</p>
+                      </div>
+                    )}
 
                     {identification.description && (
                       <div>
@@ -315,8 +383,38 @@ const EquipmentIdentifierDialog = ({
                         </div>
                       </div>
                     )}
+
+                    {catalogUrl && (
+                      <a 
+                        href={catalogUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View Manufacturer Catalog
+                      </a>
+                    )}
                   </CardContent>
                 </Card>
+
+                {/* Scraped Product Images */}
+                {scrapedImages.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="font-semibold text-sm">Similar Products from Catalog</h3>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {scrapedImages.slice(0, 5).map((img, idx) => (
+                        <img 
+                          key={idx}
+                          src={img} 
+                          alt={`Catalog product ${idx + 1}`}
+                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0 border hover:border-primary cursor-pointer transition-colors"
+                          onClick={() => window.open(img, '_blank')}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Matched Suppliers */}
                 {matchedSuppliers.length > 0 ? (
