@@ -38,28 +38,13 @@ serve(async (req) => {
     console.log('Scraping catalog for product images:', formattedUrl);
     console.log('Looking for:', manufacturerName, productName);
 
-    // First, try to scrape the catalog page for images
-    const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: formattedUrl,
-        formats: ['links', 'screenshot'],
-        onlyMainContent: true,
-        waitFor: 3000,
-      }),
-    });
+    // Create an AbortController for timeout handling
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-    const scrapeData = await scrapeResponse.json();
-
-    if (!scrapeResponse.ok) {
-      console.error('Firecrawl scrape error:', scrapeData);
-      
-      // Fallback: Try to get branding/logo info
-      const brandingResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+    try {
+      // Try to scrape the catalog page for images - with reduced wait time
+      const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
@@ -67,69 +52,93 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           url: formattedUrl,
-          formats: ['branding'],
+          formats: ['links'],
+          onlyMainContent: true,
+          waitFor: 1000, // Reduced from 3000ms to 1000ms
+          timeout: 10000, // 10 second timeout for Firecrawl
         }),
+        signal: controller.signal,
       });
 
-      const brandingData = await brandingResponse.json();
-      
-      if (brandingResponse.ok && brandingData.data?.branding?.images?.logo) {
+      clearTimeout(timeoutId);
+
+      const scrapeData = await scrapeResponse.json();
+
+      if (!scrapeResponse.ok || !scrapeData.success) {
+        console.error('Firecrawl scrape error:', scrapeData);
+        
+        // Return gracefully with no images instead of erroring
         return new Response(
-          JSON.stringify({
-            success: true,
-            logoUrl: brandingData.data.branding.images.logo,
-            source: 'branding'
+          JSON.stringify({ 
+            success: true, 
+            imageUrls: [], 
+            allLinks: [],
+            source: 'fallback',
+            message: 'Catalog scrape timed out - using fallback'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      return new Response(
-        JSON.stringify({ success: false, error: 'Could not fetch product images' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Extract image URLs from the scraped content
-    const links = scrapeData.data?.links || [];
-    const screenshot = scrapeData.data?.screenshot;
-    
-    // Filter for image links
-    const imageLinks = links.filter((link: string) => {
-      const lower = link.toLowerCase();
-      return lower.endsWith('.jpg') || 
-             lower.endsWith('.jpeg') || 
-             lower.endsWith('.png') || 
-             lower.endsWith('.webp') ||
-             lower.includes('/images/') ||
-             lower.includes('/img/') ||
-             lower.includes('/assets/');
-    });
-
-    console.log('Found image links:', imageLinks.length);
-
-    // Try to find product-specific images
-    const productImages = imageLinks.filter((link: string) => {
-      const lower = link.toLowerCase();
-      const productLower = (productName || '').toLowerCase();
-      const manufacturerLower = manufacturerName.toLowerCase();
+      // Extract image URLs from the scraped content
+      const links = scrapeData.data?.links || [];
       
-      return lower.includes(productLower) || 
-             lower.includes(manufacturerLower) ||
-             lower.includes('product') ||
-             lower.includes('catalog');
-    });
+      // Filter for image links
+      const imageLinks = links.filter((link: string) => {
+        const lower = link.toLowerCase();
+        return lower.endsWith('.jpg') || 
+               lower.endsWith('.jpeg') || 
+               lower.endsWith('.png') || 
+               lower.endsWith('.webp') ||
+               lower.includes('/images/') ||
+               lower.includes('/img/') ||
+               lower.includes('/assets/');
+      });
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        imageUrls: productImages.length > 0 ? productImages.slice(0, 5) : imageLinks.slice(0, 5),
-        screenshot: screenshot,
-        allLinks: imageLinks.slice(0, 10),
-        source: 'scrape'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      console.log('Found image links:', imageLinks.length);
+
+      // Try to find product-specific images
+      const productImages = imageLinks.filter((link: string) => {
+        const lower = link.toLowerCase();
+        const productLower = (productName || '').toLowerCase();
+        const manufacturerLower = manufacturerName.toLowerCase();
+        
+        return lower.includes(productLower) || 
+               lower.includes(manufacturerLower) ||
+               lower.includes('product') ||
+               lower.includes('catalog');
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          imageUrls: productImages.length > 0 ? productImages.slice(0, 5) : imageLinks.slice(0, 5),
+          allLinks: imageLinks.slice(0, 10),
+          source: 'scrape'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      
+      // Handle timeout/abort gracefully
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        console.log('Request timed out, returning empty result');
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            imageUrls: [], 
+            allLinks: [],
+            source: 'timeout',
+            message: 'Request timed out'
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw fetchError;
+    }
 
   } catch (error) {
     console.error('Error scraping product images:', error);
