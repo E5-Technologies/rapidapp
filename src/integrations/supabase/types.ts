@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      equipment_suppliers: {
+        Row: {
+          catalog_url: string | null
+          category: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          catalog_url?: string | null
+          category: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          catalog_url?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       favorite_locations: {
         Row: {
           created_at: string
