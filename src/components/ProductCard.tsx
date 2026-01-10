@@ -1,7 +1,9 @@
-import { ChevronRight, Phone, Package, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronRight, Phone, Package, ExternalLink, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { findCatalogUrl, findManufacturerLogoKey, manufacturerLogoUrls } from "@/data/equipmentCatalog";
+import { supabase } from "@/integrations/supabase/client";
 // Import all logo images
 import ascoLogo from "@/assets/logos/asco.png";
 import bakerHughesLogo from "@/assets/logos/baker-hughes.png";
@@ -133,7 +135,7 @@ const resolveLogo = (logoPath: string | null | undefined, companyName: string): 
   return null;
 };
 
-// Category-specific product images from real industrial sources
+// Category-specific fallback product images
 const categoryImages: Record<string, string> = {
   "Valves": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
   "Pumps": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=400&h=300&fit=crop",
@@ -146,14 +148,17 @@ const categoryImages: Record<string, string> = {
   "Automation": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=300&fit=crop",
 };
 
-// Get appropriate image for a product
-const getProductImage = (image: string | null, category: string, title: string): string | null => {
-  // If valid custom image URL exists (not the placeholder), use it
+// Cache for scraped images
+const scrapedImageCache = new Map<string, string | null>();
+
+// Get appropriate image for a product (without scraping - synchronous check)
+const getProductImageSync = (image: string | null, category: string, title: string): string | null => {
+  // If valid custom image URL exists (not placeholder), use it
   if (image && !image.includes('unsplash.com/photo-1581092918056') && image.startsWith('http')) {
     return image;
   }
   
-  // Use category-specific image
+  // Use category-specific fallback image
   if (category && categoryImages[category]) {
     return categoryImages[category];
   }
@@ -182,10 +187,68 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category, onContactClick }: ProductCardProps) => {
+  const [scrapedImage, setScrapedImage] = useState<string | null>(null);
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
+  
   const resolvedLogo = resolveLogo(logo, company);
-  const productImage = getProductImage(image, category || '', title);
+  const fallbackImage = getProductImageSync(image, category || '', title);
   const catalogUrl = findCatalogUrl(company);
   
+  // Try to fetch real product image from catalog
+  useEffect(() => {
+    const cacheKey = `${company}-${product}`.toLowerCase();
+    
+    // Check cache first
+    if (scrapedImageCache.has(cacheKey)) {
+      const cached = scrapedImageCache.get(cacheKey);
+      if (cached) {
+        setScrapedImage(cached);
+      }
+      return;
+    }
+    
+    // If we already have a good image, skip scraping
+    if (image && !image.includes('unsplash.com') && !image.includes('example.com') && image.startsWith('http')) {
+      return;
+    }
+    
+    // Get catalog URL
+    if (!catalogUrl) return;
+    
+    const fetchImage = async () => {
+      setIsLoadingImage(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('scrape-product-image', {
+          body: {
+            manufacturerName: company,
+            productName: product,
+            catalogUrl
+          }
+        });
+        
+        if (!error && data?.success) {
+          const imageUrl = data.imageUrls?.[0] || data.screenshot || null;
+          if (imageUrl) {
+            scrapedImageCache.set(cacheKey, imageUrl);
+            setScrapedImage(imageUrl);
+          } else {
+            scrapedImageCache.set(cacheKey, null);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch product image:', err);
+      } finally {
+        setIsLoadingImage(false);
+      }
+    };
+    
+    // Only fetch for first few cards to avoid rate limits
+    if (scrapedImageCache.size < 10) {
+      fetchImage();
+    }
+  }, [company, product, image, catalogUrl]);
+  
+  const productImage = scrapedImage || fallbackImage;
   return (
     <div className="bg-card rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between">
@@ -216,6 +279,11 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       <div>
         <h4 className="font-medium text-xs text-muted-foreground mb-2">{title}</h4>
         <div className="relative mb-3">
+          {isLoadingImage && (
+            <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center z-10">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          )}
           {productImage ? (
             <img 
               src={productImage} 
@@ -223,13 +291,18 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
               className="w-full h-40 object-cover rounded-lg"
               onError={(e) => {
                 const target = e.currentTarget;
-                target.style.display = 'none';
-                const parent = target.parentElement;
-                if (parent) {
-                  const fallback = document.createElement('div');
-                  fallback.className = 'w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2';
-                  fallback.innerHTML = '<span class="text-xs text-muted-foreground">Product Image</span>';
-                  parent.insertBefore(fallback, target);
+                // Try fallback image on error
+                if (fallbackImage && target.src !== fallbackImage) {
+                  target.src = fallbackImage;
+                } else {
+                  target.style.display = 'none';
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const fallbackDiv = document.createElement('div');
+                    fallbackDiv.className = 'w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2';
+                    fallbackDiv.innerHTML = '<span class="text-xs text-muted-foreground">Product Image</span>';
+                    parent.insertBefore(fallbackDiv, target);
+                  }
                 }
               }}
             />
