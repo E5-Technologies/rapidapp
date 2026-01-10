@@ -1,6 +1,89 @@
-import { ChevronRight, Phone } from "lucide-react";
+import { ChevronRight, Phone, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+// Import all logo images
+import ascoLogo from "@/assets/logos/asco.png";
+import bakerHughesLogo from "@/assets/logos/baker-hughes.png";
+import cameronLogo from "@/assets/logos/cameron.png";
+import circorLogo from "@/assets/logos/circor.png";
+import craneLogo from "@/assets/logos/crane.png";
+import ebaraLogo from "@/assets/logos/ebara.png";
+import emersonLogo from "@/assets/logos/emerson.png";
+import flowserveLogo from "@/assets/logos/flowserve.png";
+import grundfosLogo from "@/assets/logos/grundfos.png";
+import imiLogo from "@/assets/logos/imi.png";
+import ittGouldsLogo from "@/assets/logos/itt-goulds.png";
+import ksbLogo from "@/assets/logos/ksb.png";
+import metsoLogo from "@/assets/logos/metso.png";
+import nelesLogo from "@/assets/logos/neles.png";
+import parkerLogo from "@/assets/logos/parker.png";
+import pentairLogo from "@/assets/logos/pentair.png";
+import ruhrpumpenLogo from "@/assets/logos/ruhrpumpen.png";
+import sulzerLogo from "@/assets/logos/sulzer.png";
+import swagelokLogo from "@/assets/logos/swagelok.png";
+import tsurumiLogo from "@/assets/logos/tsurumi.png";
+import tycoLogo from "@/assets/logos/tyco.png";
+import velanLogo from "@/assets/logos/velan.png";
+import weirLogo from "@/assets/logos/weir.png";
+import wiloLogo from "@/assets/logos/wilo.png";
+import xylemLogo from "@/assets/logos/xylem.png";
+
+// Logo mapping for resolving paths
+const logoMap: Record<string, string> = {
+  "asco": ascoLogo,
+  "baker-hughes": bakerHughesLogo,
+  "cameron": cameronLogo,
+  "circor": circorLogo,
+  "crane": craneLogo,
+  "ebara": ebaraLogo,
+  "emerson": emersonLogo,
+  "flowserve": flowserveLogo,
+  "grundfos": grundfosLogo,
+  "imi": imiLogo,
+  "itt-goulds": ittGouldsLogo,
+  "ksb": ksbLogo,
+  "metso": metsoLogo,
+  "neles": nelesLogo,
+  "parker": parkerLogo,
+  "pentair": pentairLogo,
+  "ruhrpumpen": ruhrpumpenLogo,
+  "sulzer": sulzerLogo,
+  "swagelok": swagelokLogo,
+  "tsurumi": tsurumiLogo,
+  "tyco": tycoLogo,
+  "velan": velanLogo,
+  "weir": weirLogo,
+  "wilo": wiloLogo,
+  "xylem": xylemLogo,
+};
+
+// Function to resolve logo path
+const resolveLogo = (logoPath: string | null | undefined, companyName: string): string | null => {
+  if (!logoPath) return null;
+  
+  // Extract the logo name from the path (e.g., "/src/assets/logos/swagelok.png" -> "swagelok")
+  const match = logoPath.match(/logos\/([^.]+)\./);
+  if (match && match[1]) {
+    const logoKey = match[1].toLowerCase();
+    if (logoMap[logoKey]) {
+      return logoMap[logoKey];
+    }
+  }
+  
+  // Try matching by company name
+  const companyKey = companyName.toLowerCase().replace(/\s+/g, '-');
+  if (logoMap[companyKey]) {
+    return logoMap[companyKey];
+  }
+  
+  // If it's already a valid URL, return it
+  if (logoPath.startsWith('http')) {
+    return logoPath;
+  }
+  
+  return null;
+};
 
 interface ProductCardProps {
   company: string;
@@ -9,18 +92,34 @@ interface ProductCardProps {
   product: string;
   rating: number;
   image: string;
-  dataSheet?: string;
+  dataSheet?: string | null;
   manufacturerId?: string;
   onContactClick?: () => void;
 }
 
 const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, onContactClick }: ProductCardProps) => {
+  const resolvedLogo = resolveLogo(logo, company);
+  const hasValidImage = image && !image.includes('unsplash.com/photo-1581092918056');
+  
   return (
     <div className="bg-card rounded-2xl p-4 space-y-3">
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <img src={logo} alt={company} className="w-20 h-20 object-contain" />
+            {resolvedLogo ? (
+              <img 
+                src={resolvedLogo} 
+                alt={company} 
+                className="w-20 h-20 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
+                <span className="text-xs font-bold text-muted-foreground text-center px-1">{company}</span>
+              </div>
+            )}
             <h3 className="font-bold text-sm">{company}</h3>
           </div>
         </div>
@@ -32,7 +131,22 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       <div>
         <h4 className="font-medium text-xs text-muted-foreground mb-2">{title}</h4>
         <div className="relative mb-3">
-          <img src={image} alt={product} className="w-full h-40 object-cover rounded-lg" />
+          {hasValidImage ? (
+            <img 
+              src={image} 
+              alt={product} 
+              className="w-full h-40 object-cover rounded-lg"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement?.classList.add('bg-muted');
+              }}
+            />
+          ) : (
+            <div className="w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2">
+              <Package className="w-12 h-12 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Product Image</span>
+            </div>
+          )}
           <Badge className="absolute bottom-2 right-2 bg-primary text-primary-foreground">
             Order
           </Badge>
