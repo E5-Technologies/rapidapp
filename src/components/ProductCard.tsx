@@ -242,8 +242,8 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       }
     };
     
-    // Only fetch for first few cards to avoid rate limits
-    if (scrapedImageCache.size < 10) {
+    // Fetch images for cards (increased limit since we're using search API now)
+    if (scrapedImageCache.size < 25) {
       fetchImage();
     }
   }, [company, product, image, catalogUrl]);

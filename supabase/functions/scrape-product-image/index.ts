@@ -13,9 +13,9 @@ serve(async (req) => {
   try {
     const { manufacturerName, productName, catalogUrl } = await req.json();
 
-    if (!manufacturerName || !catalogUrl) {
+    if (!manufacturerName || !productName) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Manufacturer name and catalog URL are required' }),
+        JSON.stringify({ success: false, error: 'Manufacturer name and product name are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -23,7 +23,6 @@ serve(async (req) => {
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
       console.log('FIRECRAWL_API_KEY not configured - returning empty result');
-      // Return success with empty data instead of error
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -35,90 +34,105 @@ serve(async (req) => {
       );
     }
 
-    // Format URL
-    let formattedUrl = catalogUrl.trim();
-    if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
-      formattedUrl = `https://${formattedUrl}`;
-    }
-
-    console.log('Scraping catalog for product images:', formattedUrl);
-    console.log('Looking for:', manufacturerName, productName);
+    console.log('Searching for product images:', manufacturerName, productName);
 
     try {
-      // Try to scrape the catalog page for images - with reduced wait time
-      const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      // Use Firecrawl search to find product images
+      const searchQuery = `${manufacturerName} ${productName} product image`;
+      
+      const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          url: formattedUrl,
-          formats: ['links'],
-          onlyMainContent: true,
-          waitFor: 500, // Reduced wait time
-          timeout: 8000, // 8 second timeout for Firecrawl
+          query: searchQuery,
+          limit: 5,
+          scrapeOptions: {
+            formats: ['markdown', 'links']
+          }
         }),
       });
 
-      const scrapeData = await scrapeResponse.json();
+      const searchData = await searchResponse.json();
 
-      // Handle any Firecrawl error gracefully
-      if (!scrapeResponse.ok || !scrapeData.success) {
-        console.log('Firecrawl returned error, returning empty result:', scrapeData?.error || scrapeData?.code);
+      if (!searchResponse.ok || !searchData.success) {
+        console.log('Firecrawl search returned error:', searchData?.error || searchData?.code);
         return new Response(
           JSON.stringify({ 
             success: true, 
             imageUrls: [], 
             allLinks: [],
-            source: 'scrape-failed'
+            source: 'search-failed'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Extract image URLs from the scraped content - handle nested data structure
-      const data = scrapeData.data || scrapeData;
-      const links = data?.links || [];
+      // Extract image URLs from search results
+      const imageUrls: string[] = [];
+      const results = searchData.data || [];
       
-      // Filter for image links
-      const imageLinks = links.filter((link: string) => {
-        const lower = link.toLowerCase();
-        return lower.endsWith('.jpg') || 
-               lower.endsWith('.jpeg') || 
-               lower.endsWith('.png') || 
-               lower.endsWith('.webp') ||
-               lower.includes('/images/') ||
-               lower.includes('/img/') ||
-               lower.includes('/assets/');
-      });
-
-      console.log('Found image links:', imageLinks.length);
-
-      // Try to find product-specific images
-      const productImages = imageLinks.filter((link: string) => {
-        const lower = link.toLowerCase();
-        const productLower = (productName || '').toLowerCase();
-        const manufacturerLower = manufacturerName.toLowerCase();
+      for (const result of results) {
+        // Check markdown content for image references
+        const markdown = result.markdown || '';
+        const imageRegex = /!\[.*?\]\((https?:\/\/[^\s)]+\.(jpg|jpeg|png|webp|gif)[^\s)]*)\)/gi;
+        let match;
+        while ((match = imageRegex.exec(markdown)) !== null) {
+          if (match[1] && !imageUrls.includes(match[1])) {
+            imageUrls.push(match[1]);
+          }
+        }
         
-        return lower.includes(productLower) || 
-               lower.includes(manufacturerLower) ||
-               lower.includes('product') ||
-               lower.includes('catalog');
+        // Also check for raw image URLs in content
+        const urlRegex = /(https?:\/\/[^\s"'<>]+\.(jpg|jpeg|png|webp)(\?[^\s"'<>]*)?)/gi;
+        while ((match = urlRegex.exec(markdown)) !== null) {
+          if (match[1] && !imageUrls.includes(match[1])) {
+            imageUrls.push(match[1]);
+          }
+        }
+
+        // Check links array for image URLs
+        const links = result.links || [];
+        for (const link of links) {
+          const lower = link.toLowerCase();
+          if ((lower.includes('.jpg') || lower.includes('.jpeg') || 
+               lower.includes('.png') || lower.includes('.webp')) &&
+              !imageUrls.includes(link)) {
+            imageUrls.push(link);
+          }
+        }
+      }
+
+      console.log('Found image URLs:', imageUrls.length);
+
+      // Filter to prioritize manufacturer-specific images
+      const manufacturerLower = manufacturerName.toLowerCase();
+      const productLower = productName.toLowerCase();
+      
+      const prioritizedImages = imageUrls.filter(url => {
+        const lower = url.toLowerCase();
+        return lower.includes(manufacturerLower) || 
+               lower.includes(productLower.split(' ')[0]) ||
+               lower.includes('product');
       });
+
+      const finalImages = prioritizedImages.length > 0 
+        ? prioritizedImages.slice(0, 3) 
+        : imageUrls.slice(0, 3);
 
       return new Response(
         JSON.stringify({
           success: true,
-          imageUrls: productImages.length > 0 ? productImages.slice(0, 5) : imageLinks.slice(0, 5),
-          allLinks: imageLinks.slice(0, 10),
-          source: 'scrape'
+          imageUrls: finalImages,
+          allLinks: imageUrls.slice(0, 10),
+          source: 'search'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
     } catch (fetchError) {
-      // Handle any fetch error gracefully - return success with empty data
       console.log('Fetch error, returning empty result:', fetchError instanceof Error ? fetchError.message : 'Unknown error');
       return new Response(
         JSON.stringify({ 
@@ -133,7 +147,6 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in scrape-product-image:', error);
-    // Even on complete failure, return success with empty data to prevent UI errors
     return new Response(
       JSON.stringify({ 
         success: true, 
