@@ -18,23 +18,35 @@ export type Database = {
         Row: {
           catalog_url: string | null
           category: string
+          contact_name: string | null
           created_at: string
+          description: string | null
+          email: string | null
           id: string
           name: string
+          phone: string | null
         }
         Insert: {
           catalog_url?: string | null
           category: string
+          contact_name?: string | null
           created_at?: string
+          description?: string | null
+          email?: string | null
           id?: string
           name: string
+          phone?: string | null
         }
         Update: {
           catalog_url?: string | null
           category?: string
+          contact_name?: string | null
           created_at?: string
+          description?: string | null
+          email?: string | null
           id?: string
           name?: string
+          phone?: string | null
         }
         Relationships: []
       }

@@ -1,9 +1,10 @@
-import { Camera, Map } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Camera, Map, Search } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 const BottomNav = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isScrolling, setIsScrolling] = useState(false);
 
   useEffect(() => {
@@ -24,14 +25,25 @@ const BottomNav = () => {
     };
   }, []);
 
+  const handleCameraClick = () => {
+    navigate("/equipment");
+  };
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
       {/* Camera Button - Elevated */}
       <div className={`absolute left-1/2 -translate-x-1/2 -top-6 transition-all duration-300 ${
         isScrolling ? "opacity-0 scale-75 pointer-events-none" : "opacity-100 scale-100"
       }`}>
-        <button className="w-14 h-14 rounded-full bg-foreground flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
-          <Camera className="w-6 h-6 text-background" strokeWidth={1.5} />
+        <button 
+          onClick={handleCameraClick}
+          className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform ${
+            location.pathname === "/equipment" 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-foreground text-background"
+          }`}
+        >
+          <Search className="w-6 h-6" strokeWidth={1.5} />
         </button>
       </div>
 

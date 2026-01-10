@@ -53,13 +53,28 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Analyzing material image with AI...");
+    // Fetch all equipment suppliers from the database
+    const { data: suppliers, error: suppliersError } = await supabaseClient
+      .from('equipment_suppliers')
+      .select('*');
+
+    if (suppliersError) {
+      console.error("Error fetching suppliers:", suppliersError);
+    }
+
+    // Create a list of known manufacturers for the AI prompt
+    const manufacturersList = suppliers?.map(s => s.name).join(', ') || '';
+    const categoriesList = [...new Set(suppliers?.map(s => s.category) || [])].join(', ');
+
+    console.log("Analyzing equipment image with AI...");
+    console.log("Known categories:", categoriesList);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -72,22 +87,30 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert in oil and gas industry materials. Analyze images of industrial equipment and identify:
-1. Type of equipment (valve, pump, piping, instrumentation, electrical, vessel)
-2. Specific type (e.g., ball valve, gate valve, control valve, centrifugal pump, etc.)
-3. Visible manufacturer or brand if any
+            content: `You are an expert in oil and gas industry equipment identification. You have access to a database of equipment suppliers in these categories: ${categoriesList}.
+
+Known manufacturers in our database: ${manufacturersList}
+
+Analyze images of industrial equipment and identify:
+1. Equipment category (must be one of: ${categoriesList})
+2. Specific equipment type (e.g., ball valve, gate valve, control valve, centrifugal pump, pressure vessel, etc.)
+3. Manufacturer - Try to match to one of our known manufacturers if visible
 4. Material composition if visible (stainless steel, carbon steel, brass, etc.)
-5. Approximate size class and pressure rating if visible
+5. Size/specifications if visible
 6. Key identifying features
+
+IMPORTANT: When identifying the manufacturer, try to match it exactly to one of these known names: ${manufacturersList}
 
 Respond in JSON format with:
 {
-  "category": "Valves|Pumps|Piping|Instrumentation|Electrical|Vessels",
-  "type": "specific type",
-  "manufacturer": "brand name or unknown",
-  "material": "material type",
+  "category": "Valves|Pumps|Tanks|Vessels|Automation",
+  "type": "specific equipment type",
+  "manufacturer": "exact manufacturer name from our database or 'Unknown'",
+  "material": "material type if visible",
+  "size": "size/specs if visible",
   "confidence": 0-100,
   "features": ["feature1", "feature2"],
+  "description": "brief description of what was identified",
   "searchTerms": ["keyword1", "keyword2"]
 }`
           },
@@ -96,7 +119,7 @@ Respond in JSON format with:
             content: [
               {
                 type: "text",
-                text: "Identify this oil and gas material/equipment:"
+                text: "Identify this oil and gas equipment. Match the manufacturer to our database if possible:"
               },
               {
                 type: "image_url",
@@ -111,6 +134,18 @@ Respond in JSON format with:
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI service payment required." }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
       throw new Error(`AI analysis failed: ${response.status}`);
@@ -126,14 +161,43 @@ Respond in JSON format with:
     const identification = jsonMatch ? JSON.parse(jsonMatch[0]) : {
       category: "Unknown",
       type: "Unknown",
-      manufacturer: "unknown",
+      manufacturer: "Unknown",
       confidence: 50,
       features: [],
       searchTerms: []
     };
 
+    // Find matching suppliers from the database
+    let matchedSuppliers = [];
+    
+    if (suppliers && suppliers.length > 0) {
+      // First, try to match by manufacturer name
+      if (identification.manufacturer && identification.manufacturer !== "Unknown") {
+        const manufacturerMatch = suppliers.filter(s => 
+          s.name.toLowerCase().includes(identification.manufacturer.toLowerCase()) ||
+          identification.manufacturer.toLowerCase().includes(s.name.toLowerCase())
+        );
+        matchedSuppliers = manufacturerMatch;
+      }
+      
+      // If no manufacturer match, filter by category
+      if (matchedSuppliers.length === 0 && identification.category) {
+        matchedSuppliers = suppliers.filter(s => 
+          s.category.toLowerCase() === identification.category.toLowerCase()
+        );
+      }
+      
+      // Limit to top 5 results
+      matchedSuppliers = matchedSuppliers.slice(0, 5);
+    }
+
+    console.log("Matched suppliers:", matchedSuppliers.length);
+
     return new Response(
-      JSON.stringify(identification),
+      JSON.stringify({
+        identification,
+        matchedSuppliers
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
@@ -143,8 +207,11 @@ Respond in JSON format with:
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : "Unknown error",
-        category: "Unknown",
-        confidence: 0
+        identification: {
+          category: "Unknown",
+          confidence: 0
+        },
+        matchedSuppliers: []
       }),
       {
         status: 500,
