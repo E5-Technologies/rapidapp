@@ -1,7 +1,7 @@
-import { ChevronRight, Phone, Package } from "lucide-react";
+import { ChevronRight, Phone, Package, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-
+import { findCatalogUrl, findManufacturerLogoKey, manufacturerLogoUrls } from "@/data/equipmentCatalog";
 // Import all logo images
 import ascoLogo from "@/assets/logos/asco.png";
 import bakerHughesLogo from "@/assets/logos/baker-hughes.png";
@@ -30,18 +30,22 @@ import wiloLogo from "@/assets/logos/wilo.png";
 import xylemLogo from "@/assets/logos/xylem.png";
 
 // Logo mapping for resolving paths
-const logoMap: Record<string, string> = {
+const logoMap: Record<string, string | null> = {
   "asco": ascoLogo,
   "baker-hughes": bakerHughesLogo,
+  "bakerhughes": bakerHughesLogo,
   "cameron": cameronLogo,
   "circor": circorLogo,
   "crane": craneLogo,
   "ebara": ebaraLogo,
   "emerson": emersonLogo,
+  "fisher": emersonLogo,
+  "rosemount": emersonLogo,
   "flowserve": flowserveLogo,
   "grundfos": grundfosLogo,
   "imi": imiLogo,
   "itt-goulds": ittGouldsLogo,
+  "goulds": ittGouldsLogo,
   "ksb": ksbLogo,
   "metso": metsoLogo,
   "neles": nelesLogo,
@@ -54,32 +58,76 @@ const logoMap: Record<string, string> = {
   "tyco": tycoLogo,
   "velan": velanLogo,
   "weir": weirLogo,
+  "warman": weirLogo,
   "wilo": wiloLogo,
   "xylem": xylemLogo,
+  // Additional valve manufacturers
+  "balon": null,
+  "bray": null,
+  "kimray": null,
+  "franklin": null,
+  "bonney": null,
+  "victaulic": null,
+  "warren": null,
+  "mercer": null,
+  "taylor": null,
+  "scv": null,
+  "wkm": null,
+  "pbv": null,
+  "kf": null,
+  "wheatley": null,
+  "crosby": null,
+  "eanardo": null,
+  "kitz": null,
+  "danfoss": null,
+  "avk": null,
+  "spx": null,
+  "neway": null,
+  "gvc": null,
 };
 
 // Function to resolve logo path
 const resolveLogo = (logoPath: string | null | undefined, companyName: string): string | null => {
-  if (!logoPath) return null;
+  // First, try to match by company name directly in logoMap
+  const normalizedName = companyName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   
-  // Extract the logo name from the path (e.g., "/src/assets/logos/swagelok.png" -> "swagelok")
-  const match = logoPath.match(/logos\/([^.]+)\./);
-  if (match && match[1]) {
-    const logoKey = match[1].toLowerCase();
-    if (logoMap[logoKey]) {
-      return logoMap[logoKey];
+  // Check for direct matches
+  if (logoMap[normalizedName] !== undefined && logoMap[normalizedName] !== null) {
+    return logoMap[normalizedName];
+  }
+  
+  // Check for partial matches
+  for (const [key, value] of Object.entries(logoMap)) {
+    if (value && (normalizedName.includes(key) || key.includes(normalizedName.split('-')[0]))) {
+      return value;
     }
   }
   
-  // Try matching by company name
-  const companyKey = companyName.toLowerCase().replace(/\s+/g, '-');
-  if (logoMap[companyKey]) {
-    return logoMap[companyKey];
+  // Try using the equipment catalog logo key
+  const catalogLogoKey = findManufacturerLogoKey(companyName);
+  if (catalogLogoKey && logoMap[catalogLogoKey]) {
+    return logoMap[catalogLogoKey];
   }
   
-  // If it's already a valid URL, return it
-  if (logoPath.startsWith('http')) {
-    return logoPath;
+  // Check external logo URLs from catalog
+  if (manufacturerLogoUrls[companyName]) {
+    return manufacturerLogoUrls[companyName];
+  }
+  
+  if (logoPath) {
+    // Extract the logo name from the path (e.g., "/src/assets/logos/swagelok.png" -> "swagelok")
+    const match = logoPath.match(/logos\/([^.]+)\./);
+    if (match && match[1]) {
+      const logoKey = match[1].toLowerCase();
+      if (logoMap[logoKey]) {
+        return logoMap[logoKey];
+      }
+    }
+    
+    // If it's already a valid URL, return it
+    if (logoPath.startsWith('http')) {
+      return logoPath;
+    }
   }
   
   return null;
@@ -136,6 +184,7 @@ interface ProductCardProps {
 const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category, onContactClick }: ProductCardProps) => {
   const resolvedLogo = resolveLogo(logo, company);
   const productImage = getProductImage(image, category || '', title);
+  const catalogUrl = findCatalogUrl(company);
   
   return (
     <div className="bg-card rounded-2xl p-4 space-y-3">
@@ -202,7 +251,18 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
             </span>
           ))}
         </div>
-        <div className="flex gap-2 mt-3">
+        <div className="flex flex-wrap gap-2 mt-3">
+          {catalogUrl && (
+            <a 
+              href={catalogUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-2 bg-secondary text-secondary-foreground text-sm font-medium rounded-lg hover:bg-secondary/80 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+              View Catalog
+            </a>
+          )}
           {dataSheet && (
             <a 
               href={dataSheet} 
