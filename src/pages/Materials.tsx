@@ -91,6 +91,7 @@ const Materials = () => {
     }
 
     const query = activeSearchQuery.toLowerCase().trim();
+    const queryWords = query.split(/\s+/).filter(w => w.length > 1);
     
     // Score each material based on how well it matches
     const scoredMaterials = allMaterials.map(material => {
@@ -99,19 +100,32 @@ const Materials = () => {
       const serialNumber = material.serial_number?.toLowerCase() || "";
       const modelNumber = material.model_number?.toLowerCase() || "";
       const manufacturerName = material.manufacturer?.name?.toLowerCase() || "";
+      const category = material.category?.toLowerCase() || "";
       
       let score = 0;
       
-      // Exact matches get highest score
+      // Exact matches get highest score (recognized by AI or exact string match)
       if (serialNumber === query || modelNumber === query) score = 100;
-      else if (title === query || productName === query) score = 90;
+      else if (title === query || productName === query) score = 95;
       // Starts with query gets high score
-      else if (serialNumber.startsWith(query) || modelNumber.startsWith(query)) score = 80;
-      else if (title.startsWith(query) || productName.startsWith(query)) score = 70;
-      // Contains query gets medium score
-      else if (serialNumber.includes(query) || modelNumber.includes(query)) score = 50;
-      else if (title.includes(query) || productName.includes(query)) score = 40;
-      else if (manufacturerName.includes(query)) score = 30;
+      else if (serialNumber.startsWith(query) || modelNumber.startsWith(query)) score = 90;
+      else if (title.startsWith(query) || productName.startsWith(query)) score = 85;
+      // Contains exact query gets good score
+      else if (serialNumber.includes(query) || modelNumber.includes(query)) score = 75;
+      else if (title.includes(query) || productName.includes(query)) score = 70;
+      else if (manufacturerName.includes(query)) score = 60;
+      // Multi-word matching - partial word matches
+      else {
+        let wordMatches = 0;
+        for (const word of queryWords) {
+          if (title.includes(word) || productName.includes(word)) wordMatches += 2;
+          else if (manufacturerName.includes(word)) wordMatches += 1;
+          else if (category.includes(word)) wordMatches += 1;
+        }
+        if (wordMatches > 0) {
+          score = Math.min(50, wordMatches * 10);
+        }
+      }
       
       return { material, score };
     }).filter(item => item.score > 0)
@@ -119,15 +133,37 @@ const Materials = () => {
 
     const filtered = scoredMaterials.map(item => item.material);
     
-    // If we have a high-scoring match (80+), treat it as exact match
-    if (scoredMaterials.length > 0 && scoredMaterials[0].score >= 80) {
+    // If we have a high-scoring match (85+), treat it as exact match found
+    if (scoredMaterials.length > 0 && scoredMaterials[0].score >= 85) {
       setExactMatch(scoredMaterials[0].material);
-      setOtherResults(filtered.slice(1, 21)); // Get up to 20 other results
-      setMaterials(filtered.slice(0, 21)); // Include exact match + others
+      // Get at least 10 other suggestions, up to 20
+      const suggestions = filtered.slice(1, 21);
+      // If not enough results, pad with category-similar items
+      if (suggestions.length < 10) {
+        const matchedCategory = scoredMaterials[0].material.category;
+        const additionalItems = allMaterials
+          .filter(m => m.category === matchedCategory && m.id !== scoredMaterials[0].material.id)
+          .filter(m => !suggestions.some(s => s.id === m.id))
+          .slice(0, 10 - suggestions.length);
+        suggestions.push(...additionalItems);
+      }
+      setOtherResults(suggestions);
+      setMaterials([scoredMaterials[0].material, ...suggestions]);
     } else {
       setExactMatch(null);
       setOtherResults([]);
-      setMaterials(filtered.slice(0, 20)); // Show up to 20 search results
+      // Show up to 20 search results, pad with related items if needed
+      let searchResults = filtered.slice(0, 20);
+      if (searchResults.length < 20 && searchResults.length > 0) {
+        // Get items from same category as top result
+        const topCategory = searchResults[0].category;
+        const additionalItems = allMaterials
+          .filter(m => m.category === topCategory)
+          .filter(m => !searchResults.some(s => s.id === m.id))
+          .slice(0, 20 - searchResults.length);
+        searchResults = [...searchResults, ...additionalItems];
+      }
+      setMaterials(searchResults);
     }
   }, [activeSearchQuery, allMaterials]);
 
