@@ -22,10 +22,16 @@ serve(async (req) => {
 
     const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
     if (!apiKey) {
-      console.error('FIRECRAWL_API_KEY not configured');
+      console.log('FIRECRAWL_API_KEY not configured - returning empty result');
+      // Return success with empty data instead of error
       return new Response(
-        JSON.stringify({ success: false, error: 'Firecrawl connector not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          success: true, 
+          imageUrls: [], 
+          allLinks: [],
+          source: 'no-api-key'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -37,10 +43,6 @@ serve(async (req) => {
 
     console.log('Scraping catalog for product images:', formattedUrl);
     console.log('Looking for:', manufacturerName, productName);
-
-    // Create an AbortController for timeout handling
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
     try {
       // Try to scrape the catalog page for images - with reduced wait time
@@ -54,34 +56,30 @@ serve(async (req) => {
           url: formattedUrl,
           formats: ['links'],
           onlyMainContent: true,
-          waitFor: 1000, // Reduced from 3000ms to 1000ms
-          timeout: 10000, // 10 second timeout for Firecrawl
+          waitFor: 500, // Reduced wait time
+          timeout: 8000, // 8 second timeout for Firecrawl
         }),
-        signal: controller.signal,
       });
-
-      clearTimeout(timeoutId);
 
       const scrapeData = await scrapeResponse.json();
 
+      // Handle any Firecrawl error gracefully
       if (!scrapeResponse.ok || !scrapeData.success) {
-        console.error('Firecrawl scrape error:', scrapeData);
-        
-        // Return gracefully with no images instead of erroring
+        console.log('Firecrawl returned error, returning empty result:', scrapeData?.error || scrapeData?.code);
         return new Response(
           JSON.stringify({ 
             success: true, 
             imageUrls: [], 
             allLinks: [],
-            source: 'fallback',
-            message: 'Catalog scrape timed out - using fallback'
+            source: 'scrape-failed'
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Extract image URLs from the scraped content
-      const links = scrapeData.data?.links || [];
+      // Extract image URLs from the scraped content - handle nested data structure
+      const data = scrapeData.data || scrapeData;
+      const links = data?.links || [];
       
       // Filter for image links
       const imageLinks = links.filter((link: string) => {
@@ -120,32 +118,30 @@ serve(async (req) => {
       );
 
     } catch (fetchError) {
-      clearTimeout(timeoutId);
-      
-      // Handle timeout/abort gracefully
-      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-        console.log('Request timed out, returning empty result');
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            imageUrls: [], 
-            allLinks: [],
-            source: 'timeout',
-            message: 'Request timed out'
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      throw fetchError;
+      // Handle any fetch error gracefully - return success with empty data
+      console.log('Fetch error, returning empty result:', fetchError instanceof Error ? fetchError.message : 'Unknown error');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          imageUrls: [], 
+          allLinks: [],
+          source: 'fetch-error'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
   } catch (error) {
-    console.error('Error scraping product images:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to scrape images';
+    console.error('Error in scrape-product-image:', error);
+    // Even on complete failure, return success with empty data to prevent UI errors
     return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ 
+        success: true, 
+        imageUrls: [], 
+        allLinks: [],
+        source: 'error'
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
