@@ -1,4 +1,4 @@
-import { Camera, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import SearchBar from "@/components/SearchBar";
 import logo from "@/assets/rapid-logo.png";
@@ -6,12 +6,11 @@ import { Link } from "react-router-dom";
 
 import ProductCard from "@/components/ProductCard";
 import BottomNav from "@/components/BottomNav";
-import MaterialIdentificationDialog from "@/components/MaterialIdentificationDialog";
+import EquipmentIdentifierDialog from "@/components/EquipmentIdentifierDialog";
 import MaterialSearchDialog from "@/components/MaterialSearchDialog";
 import SalesContactDialog from "@/components/SalesContactDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
 
 interface Material {
   id: string;
@@ -32,11 +31,8 @@ interface Material {
 }
 
 const Materials = () => {
-  const [showDialog, setShowDialog] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [identification, setIdentification] = useState<any>(null);
-  const [matchedProducts, setMatchedProducts] = useState<any[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [allMaterials, setAllMaterials] = useState<Material[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,106 +131,36 @@ const Materials = () => {
     }
   }, [activeSearchQuery, allMaterials]);
 
-  async function handleImageCapture(event: React.ChangeEvent<HTMLInputElement>) {
+  const handleCameraClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.setAttribute("capture", "environment");
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      // Convert image to base64
+    if (file) {
       const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Image = reader.result as string;
-        setCapturedImage(base64Image);
-        setShowDialog(true);
-        setIsAnalyzing(true);
-        setIdentification(null);
-        setMatchedProducts([]);
-
-        try {
-          // Call edge function to identify material
-          const { data, error } = await supabase.functions.invoke('identify-material', {
-            body: { image: base64Image }
-          });
-
-          if (error) throw error;
-
-          console.log("Identification result:", data);
-          setIdentification(data);
-
-          // Find matching products based on identification
-          const matches = await findMatchingProducts(data);
-          setMatchedProducts(matches);
-
-          toast({
-            title: "Material Identified",
-            description: `Found ${matches.length} matching products`,
-          });
-        } catch (error) {
-          console.error("Error identifying material:", error);
-          toast({
-            title: "Analysis Failed",
-            description: "Could not identify the material. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsAnalyzing(false);
-        }
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        setCapturedImage(base64);
+        setShowEquipmentDialog(true);
       };
       reader.readAsDataURL(file);
-    } catch (error) {
-      console.error("Error capturing image:", error);
-      toast({
-        title: "Capture Failed",
-        description: "Could not capture image. Please try again.",
-        variant: "destructive",
-      });
     }
-  }
-
-  async function findMatchingProducts(identification: any) {
-    if (!identification || !identification.category) return [];
-
-    try {
-      // Fetch matching products from database
-      const { data, error } = await supabase
-        .from('materials')
-        .select(`
-          *,
-          manufacturer:manufacturers(name, logo_url)
-        `)
-        .eq('category', identification.category)
-        .order('purchase_count', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-
-      // Filter products based on search terms and type
-      const searchTerms = [
-        identification.type?.toLowerCase(),
-        identification.manufacturer?.toLowerCase(),
-        ...(identification.searchTerms || []).map((term: string) => term.toLowerCase())
-      ].filter(Boolean);
-
-      const matches = (data || []).filter(material => {
-        const productText = `${material.manufacturer?.name} ${material.title} ${material.product_name}`.toLowerCase();
-        return searchTerms.some(term => productText.includes(term));
-      });
-
-      // Return top 5 matches
-      return matches.slice(0, 5).map(material => ({
-        company: material.manufacturer?.name || 'Unknown',
-        logo: material.manufacturer?.logo_url || '',
-        title: material.title,
-        product: material.product_name,
-        rating: material.rating,
-        image: material.image_url || '',
-        dataSheet: material.datasheet_url
-      }));
-    } catch (error) {
-      console.error('Error finding matching products:', error);
-      return [];
+    // Reset input
+    if (event.target) {
+      event.target.value = '';
     }
-  }
+  };
+
+  const handleEquipmentDialogChange = (open: boolean) => {
+    setShowEquipmentDialog(open);
+    if (!open) {
+      setCapturedImage(null);
+    }
+  };
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -282,7 +208,7 @@ const Materials = () => {
               onChange={handleSearchChange}
               onEnterPress={handleSearchSubmit}
               onSearchClick={handleSearchSubmit}
-              onCameraClick={() => fileInputRef.current?.click()}
+              onCameraClick={handleCameraClick}
             />
           </div>
         </div>
@@ -299,7 +225,7 @@ const Materials = () => {
               onChange={handleSearchChange}
               onEnterPress={handleSearchSubmit}
               onSearchClick={handleSearchSubmit}
-              onCameraClick={() => fileInputRef.current?.click()}
+              onCameraClick={handleCameraClick}
             />
           </div>
         </div>
@@ -380,22 +306,19 @@ const Materials = () => {
         </div>
       )}
 
-      {/* Camera FAB */}
+      {/* Camera input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
-        onChange={handleImageCapture}
+        onChange={handleFileCapture}
       />
-      <MaterialIdentificationDialog
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        isAnalyzing={isAnalyzing}
-        capturedImage={capturedImage}
-        identification={identification}
-        matchedProducts={matchedProducts}
+      
+      <EquipmentIdentifierDialog
+        open={showEquipmentDialog}
+        onOpenChange={handleEquipmentDialogChange}
+        initialImage={capturedImage}
       />
 
       <MaterialSearchDialog
