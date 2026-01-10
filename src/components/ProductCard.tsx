@@ -186,7 +186,7 @@ interface ProductCardProps {
   onContactClick?: () => void;
 }
 
-const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category, onContactClick }: ProductCardProps) => {
+const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category = '', onContactClick }: ProductCardProps) => {
   const [scrapedImage, setScrapedImage] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   
