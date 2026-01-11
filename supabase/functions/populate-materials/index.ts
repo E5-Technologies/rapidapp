@@ -162,11 +162,11 @@ async function searchForProducts(
   const products: ProductInfo[] = [];
   
   try {
-    // Search DirectIndustry for this manufacturer's products
-    const searchQuery = `site:directindustry.com "${manufacturerName}" ${category}`;
-    console.log(`Searching: ${searchQuery}`);
+    // First try DirectIndustry
+    let searchQuery = `site:directindustry.com "${manufacturerName}" ${category}`;
+    console.log(`Searching DirectIndustry: ${searchQuery}`);
     
-    const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
+    let searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -181,57 +181,87 @@ async function searchForProducts(
       }),
     });
 
-    if (!searchResponse.ok) {
-      console.error(`Search failed: ${searchResponse.status}`);
-      return products;
+    let searchData: any = { data: [] };
+    
+    if (searchResponse.ok) {
+      searchData = await searchResponse.json();
+      console.log(`DirectIndustry returned ${searchData.data?.length || 0} results`);
+    }
+    
+    // If no DirectIndustry results, search manufacturer's own site
+    if (!searchData.data || searchData.data.length === 0) {
+      searchQuery = `"${manufacturerName}" ${category} products catalog`;
+      console.log(`Searching web: ${searchQuery}`);
+      
+      searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: searchQuery,
+          limit: 10,
+          scrapeOptions: {
+            formats: ['markdown']
+          }
+        }),
+      });
+      
+      if (searchResponse.ok) {
+        searchData = await searchResponse.json();
+        console.log(`Web search returned ${searchData.data?.length || 0} results`);
+      }
     }
 
-    const searchData = await searchResponse.json();
-    console.log(`Search returned ${searchData.data?.length || 0} results`);
-    
     if (searchData.data && Array.isArray(searchData.data)) {
-      for (const result of searchData.data.slice(0, 5)) {
+      for (const result of searchData.data.slice(0, 10)) {
         // Extract product name from title
         let productName = result.title?.replace(/\s*-\s*DirectIndustry.*$/i, '').trim() || '';
         productName = productName.replace(/\s*\|.*$/, '').trim();
+        productName = productName.replace(new RegExp(`^${manufacturerName}\\s*[-|:]?\\s*`, 'i'), '').trim();
         
-        if (!productName || productName.length < 3) continue;
+        if (!productName || productName.length < 3 || productName.length > 100) continue;
+        // Skip navigation/generic pages
+        if (/^(home|about|contact|products?|catalog|download)/i.test(productName)) continue;
         
-        // Extract description from markdown
+        // Extract description from markdown or snippet
         const markdown = result.markdown || '';
-        let description = '';
+        let description = result.snippet || '';
         
-        // Look for description patterns
-        const descPatterns = [
-          /(?:description|overview|features)[:\s]*([^\n]+(?:\n[^\n#]+)*)/i,
-          /^([A-Z][^.!?]+[.!?])/m,
-        ];
-        
-        for (const pattern of descPatterns) {
-          const descMatch = markdown.match(pattern);
-          if (descMatch) {
-            description = descMatch[1].trim().slice(0, 300);
-            break;
+        if (!description) {
+          const descPatterns = [
+            /(?:description|overview|features)[:\s]*([^\n]+(?:\n[^\n#]+)*)/i,
+            /^([A-Z][^.!?]+[.!?])/m,
+          ];
+          
+          for (const pattern of descPatterns) {
+            const descMatch = markdown.match(pattern);
+            if (descMatch) {
+              description = descMatch[1].trim().slice(0, 300);
+              break;
+            }
           }
         }
         
-        // Extract images - prioritize DirectIndustry CDN images
-        const diImageRegex = /https?:\/\/(?:img|media|cdn)\.directindustry\.com\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp)/gi;
-        const images = markdown.match(diImageRegex) || [];
+        // Extract images from markdown
+        const imageRegex = /https?:\/\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s"'<>)]*)?/gi;
+        const images = markdown.match(imageRegex) || [];
         
-        // Filter out small icons and logos
+        // Filter for product images
         const productImages = images.filter((img: string) => 
           !img.includes('logo') && 
           !img.includes('icon') && 
-          !img.includes('thumb') &&
-          (img.includes('photos') || img.includes('images'))
+          !img.includes('favicon') &&
+          !img.includes('banner') &&
+          img.length < 500
         );
         
         if (productName) {
           products.push({
             name: productName,
             description: description || `${category} product from ${manufacturerName}`,
-            image: productImages[0] || images[0] || ''
+            image: productImages[0] || ''
           });
         }
       }
