@@ -13,105 +13,28 @@ interface EquipmentSupplier {
   catalog_url: string | null;
 }
 
-// Scrape product images from DirectIndustry catalog
-async function scrapeDirectIndustryImages(
+interface ProductInfo {
+  name: string;
+  description: string;
+  image: string;
+}
+
+// Scrape products from catalog URL using Firecrawl
+async function scrapeCatalogProducts(
+  catalogUrl: string,
   manufacturerName: string,
   category: string,
   apiKey: string
-): Promise<{ images: string[], products: { name: string, image: string }[] }> {
-  const products: { name: string, image: string }[] = [];
-  const images: string[] = [];
+): Promise<ProductInfo[]> {
+  const products: ProductInfo[] = [];
   
   try {
-    // Search DirectIndustry for this manufacturer's products
-    const searchQuery = `site:directindustry.com ${manufacturerName} ${category}`;
-    console.log(`Searching DirectIndustry for: ${searchQuery}`);
+    console.log(`Scraping catalog: ${catalogUrl} for ${manufacturerName}`);
     
-    const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: searchQuery,
-        limit: 10,
-        scrapeOptions: {
-          formats: ['markdown', 'html']
-        }
-      }),
-    });
-
-    if (!searchResponse.ok) {
-      console.error(`DirectIndustry search failed: ${searchResponse.status}`);
-      return { images, products };
-    }
-
-    const searchData = await searchResponse.json();
-    console.log(`Found ${searchData.data?.length || 0} DirectIndustry results`);
-    
-    // Extract images from search results
-    if (searchData.data && Array.isArray(searchData.data)) {
-      for (const result of searchData.data) {
-        // Extract product name from title
-        const productName = result.title?.replace(/\s*-\s*DirectIndustry.*$/i, '').trim() || '';
-        
-        // Extract images from markdown content
-        const markdownContent = result.markdown || '';
-        const htmlContent = result.html || '';
-        
-        // Find DirectIndustry CDN images
-        const directIndustryImageRegex = /https?:\/\/(?:img|media|cdn)\.directindustry\.com\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp|gif)/gi;
-        const mdImages = markdownContent.match(directIndustryImageRegex) || [];
-        const htmlImages = htmlContent.match(directIndustryImageRegex) || [];
-        
-        // Also check for catalog PDF images
-        const pdfImageRegex = /https?:\/\/pdf\.directindustry\.com\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp)/gi;
-        const pdfImages = markdownContent.match(pdfImageRegex) || [];
-        
-        const allImages = [...new Set([...mdImages, ...htmlImages, ...pdfImages])];
-        
-        // Filter for product images (exclude logos, icons, etc.)
-        const productImages = allImages.filter(img => 
-          !img.includes('logo') && 
-          !img.includes('icon') && 
-          !img.includes('favicon') &&
-          (img.includes('product') || img.includes('catalog') || img.includes('/p/') || img.includes('/photos/'))
-        );
-        
-        if (productImages.length > 0 && productName) {
-          products.push({
-            name: productName,
-            image: productImages[0]
-          });
-          images.push(...productImages);
-        }
-      }
-    }
-    
-    return { images: [...new Set(images)], products };
-  } catch (error) {
-    console.error(`Error scraping DirectIndustry for ${manufacturerName}:`, error);
-    return { images, products };
-  }
-}
-
-// Scrape images from manufacturer catalog URL
-async function scrapeCatalogImages(
-  catalogUrl: string,
-  manufacturerName: string,
-  apiKey: string
-): Promise<{ images: string[], products: { name: string, image: string }[] }> {
-  const products: { name: string, image: string }[] = [];
-  const images: string[] = [];
-  
-  try {
-    console.log(`Scraping catalog: ${catalogUrl}`);
-    
-    // Skip PDF catalogs (can't scrape easily)
-    if (catalogUrl.endsWith('.pdf')) {
-      console.log(`Skipping PDF catalog: ${catalogUrl}`);
-      return { images, products };
+    // Skip PDF catalogs - they need special handling
+    if (catalogUrl.toLowerCase().endsWith('.pdf')) {
+      console.log(`PDF catalog detected, using search instead`);
+      return await searchForProducts(manufacturerName, category, apiKey);
     }
     
     const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
@@ -122,58 +45,202 @@ async function scrapeCatalogImages(
       },
       body: JSON.stringify({
         url: catalogUrl,
-        formats: ['markdown', 'html', 'links'],
+        formats: ['markdown', 'links'],
         onlyMainContent: true,
+        waitFor: 2000,
       }),
     });
 
     if (!scrapeResponse.ok) {
-      console.error(`Catalog scrape failed: ${scrapeResponse.status}`);
-      return { images, products };
+      console.error(`Scrape failed with status: ${scrapeResponse.status}`);
+      return await searchForProducts(manufacturerName, category, apiKey);
     }
 
     const scrapeData = await scrapeResponse.json();
     const data = scrapeData.data || scrapeData;
-    
     const markdown = data.markdown || '';
-    const html = data.html || '';
+    const links = data.links || [];
     
-    // Extract all images
-    const imageRegex = /https?:\/\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s"'<>)]*)?/gi;
-    const mdImages = markdown.match(imageRegex) || [];
-    const htmlImages = html.match(imageRegex) || [];
+    console.log(`Got ${markdown.length} chars of content and ${links.length} links`);
     
-    const allImages = [...new Set([...mdImages, ...htmlImages])];
+    // Extract images from markdown - look for image references
+    const imagePattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const urlImagePattern = /https?:\/\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp|gif)(?:\?[^\s"'<>)]*)?/gi;
     
-    // Filter for product images
-    const productImages = allImages.filter(img => {
-      const lowerImg = img.toLowerCase();
-      return !lowerImg.includes('logo') && 
-             !lowerImg.includes('icon') && 
-             !lowerImg.includes('favicon') &&
-             !lowerImg.includes('banner') &&
-             !lowerImg.includes('header') &&
-             img.length < 500; // Avoid overly long URLs
-    });
+    const mdImages: { alt: string, url: string }[] = [];
+    let match;
     
-    // Try to extract product names and associate with images
-    const productNameRegex = /(?:^|\n)\s*(?:#+\s*)?([A-Z][A-Za-z0-9\s\-\.]+(?:Valve|Pump|Tank|Vessel|Transmitter|Sensor|Controller|Actuator))/gm;
-    const productNameMatches: string[] = markdown.match(productNameRegex) || [];
-    const productNames = [...new Set<string>(productNameMatches)].map(n => n.trim());
+    while ((match = imagePattern.exec(markdown)) !== null) {
+      mdImages.push({ alt: match[1], url: match[2] });
+    }
     
-    // Associate images with product names
-    for (let i = 0; i < Math.min(productImages.length, 10); i++) {
-      const productName = productNames[i] || `${manufacturerName} Product ${i + 1}`;
+    // Also find raw image URLs
+    const rawImages = markdown.match(urlImagePattern) || [];
+    
+    // Extract product-like headings and descriptions
+    const productPatterns = [
+      // ## Product Name or ### Product Name
+      /(?:^|\n)#{2,4}\s*([A-Z][A-Za-z0-9\s\-\.\(\)\/]+)(?:\n+([^#\n][^\n]*(?:\n[^#\n][^\n]*)*))?/gm,
+      // **Product Name** followed by description
+      /\*\*([A-Z][A-Za-z0-9\s\-\.\(\)\/]+)\*\*[:\s]*([^\n]+)/g,
+      // Product-like patterns with category keywords
+      new RegExp(`([A-Z][A-Za-z0-9\\s\\-\\.]+(?:${category}|Valve|Pump|Tank|Vessel|Sensor|Meter|Controller|Actuator)[A-Za-z0-9\\s\\-\\.]*)(?:[:\\n]+([^\\n]+))?`, 'gi')
+    ];
+    
+    const foundProducts = new Map<string, { name: string, description: string }>();
+    
+    for (const pattern of productPatterns) {
+      let productMatch;
+      while ((productMatch = pattern.exec(markdown)) !== null) {
+        const name = productMatch[1]?.trim();
+        const desc = productMatch[2]?.trim() || '';
+        
+        if (name && name.length > 3 && name.length < 100 && !foundProducts.has(name.toLowerCase())) {
+          // Filter out navigation items, etc
+          if (!name.match(/^(Home|About|Contact|Products|Menu|Search|Login|Register|Cart|News|Blog|Support)/i)) {
+            foundProducts.set(name.toLowerCase(), { name, description: desc.slice(0, 300) });
+          }
+        }
+      }
+    }
+    
+    console.log(`Found ${foundProducts.size} potential products in content`);
+    
+    // Combine products with images
+    const productArray = Array.from(foundProducts.values());
+    const allImages = [
+      ...mdImages.map(i => i.url),
+      ...rawImages
+    ].filter(url => 
+      !url.includes('logo') && 
+      !url.includes('icon') && 
+      !url.includes('favicon') &&
+      !url.includes('banner') &&
+      !url.includes('header') &&
+      !url.includes('footer') &&
+      url.length < 500
+    );
+    
+    // Create product entries
+    for (let i = 0; i < Math.min(productArray.length, 10); i++) {
       products.push({
-        name: productName,
-        image: productImages[i]
+        name: productArray[i].name,
+        description: productArray[i].description,
+        image: allImages[i] || ''
       });
     }
     
-    return { images: productImages.slice(0, 20), products };
+    // If we found images but few products, create generic entries
+    if (products.length < 3 && allImages.length > 0) {
+      for (let i = products.length; i < Math.min(allImages.length, 5); i++) {
+        products.push({
+          name: `${manufacturerName} ${category} ${i + 1}`,
+          description: `${category} equipment from ${manufacturerName}`,
+          image: allImages[i]
+        });
+      }
+    }
+    
+    // If still no products, fallback to search
+    if (products.length === 0) {
+      return await searchForProducts(manufacturerName, category, apiKey);
+    }
+    
+    return products;
   } catch (error) {
     console.error(`Error scraping catalog ${catalogUrl}:`, error);
-    return { images, products };
+    return await searchForProducts(manufacturerName, category, apiKey);
+  }
+}
+
+// Search DirectIndustry for product info
+async function searchForProducts(
+  manufacturerName: string,
+  category: string,
+  apiKey: string
+): Promise<ProductInfo[]> {
+  const products: ProductInfo[] = [];
+  
+  try {
+    // Search DirectIndustry for this manufacturer's products
+    const searchQuery = `site:directindustry.com "${manufacturerName}" ${category}`;
+    console.log(`Searching: ${searchQuery}`);
+    
+    const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: searchQuery,
+        limit: 5,
+        scrapeOptions: {
+          formats: ['markdown']
+        }
+      }),
+    });
+
+    if (!searchResponse.ok) {
+      console.error(`Search failed: ${searchResponse.status}`);
+      return products;
+    }
+
+    const searchData = await searchResponse.json();
+    console.log(`Search returned ${searchData.data?.length || 0} results`);
+    
+    if (searchData.data && Array.isArray(searchData.data)) {
+      for (const result of searchData.data.slice(0, 5)) {
+        // Extract product name from title
+        let productName = result.title?.replace(/\s*-\s*DirectIndustry.*$/i, '').trim() || '';
+        productName = productName.replace(/\s*\|.*$/, '').trim();
+        
+        if (!productName || productName.length < 3) continue;
+        
+        // Extract description from markdown
+        const markdown = result.markdown || '';
+        let description = '';
+        
+        // Look for description patterns
+        const descPatterns = [
+          /(?:description|overview|features)[:\s]*([^\n]+(?:\n[^\n#]+)*)/i,
+          /^([A-Z][^.!?]+[.!?])/m,
+        ];
+        
+        for (const pattern of descPatterns) {
+          const descMatch = markdown.match(pattern);
+          if (descMatch) {
+            description = descMatch[1].trim().slice(0, 300);
+            break;
+          }
+        }
+        
+        // Extract images - prioritize DirectIndustry CDN images
+        const diImageRegex = /https?:\/\/(?:img|media|cdn)\.directindustry\.com\/[^\s"'<>)]+\.(?:jpg|jpeg|png|webp)/gi;
+        const images = markdown.match(diImageRegex) || [];
+        
+        // Filter out small icons and logos
+        const productImages = images.filter((img: string) => 
+          !img.includes('logo') && 
+          !img.includes('icon') && 
+          !img.includes('thumb') &&
+          (img.includes('photos') || img.includes('images'))
+        );
+        
+        if (productName) {
+          products.push({
+            name: productName,
+            description: description || `${category} product from ${manufacturerName}`,
+            image: productImages[0] || images[0] || ''
+          });
+        }
+      }
+    }
+    
+    return products;
+  } catch (error) {
+    console.error(`Error searching for ${manufacturerName}:`, error);
+    return products;
   }
 }
 
@@ -192,32 +259,34 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { supplierIds, limit = 5 } = await req.json();
+    const { supplierIds, limit = 5, offset = 0 } = await req.json();
     
     // Get suppliers to process
     let query = supabase
       .from('equipment_suppliers')
       .select('id, name, category, catalog_url')
-      .not('catalog_url', 'is', null);
+      .not('catalog_url', 'is', null)
+      .order('name');
     
     if (supplierIds && supplierIds.length > 0) {
       query = query.in('id', supplierIds);
     }
     
-    const { data: suppliers, error: suppliersError } = await query.limit(limit);
+    const { data: suppliers, error: suppliersError } = await query.range(offset, offset + limit - 1);
     
     if (suppliersError) {
       throw suppliersError;
     }
 
-    console.log(`Processing ${suppliers?.length || 0} suppliers`);
+    console.log(`Processing ${suppliers?.length || 0} suppliers (offset: ${offset})`);
     
     const results: any[] = [];
     
     for (const supplier of (suppliers || []) as EquipmentSupplier[]) {
-      console.log(`Processing supplier: ${supplier.name} (${supplier.category})`);
+      console.log(`\n=== Processing: ${supplier.name} (${supplier.category}) ===`);
+      console.log(`Catalog URL: ${supplier.catalog_url}`);
       
-      // First, ensure manufacturer exists
+      // Ensure manufacturer exists
       let { data: manufacturer } = await supabase
         .from('manufacturers')
         .select('id')
@@ -225,7 +294,6 @@ serve(async (req) => {
         .single();
       
       if (!manufacturer) {
-        // Create manufacturer
         const { data: newManufacturer, error: createError } = await supabase
           .from('manufacturers')
           .insert({
@@ -237,32 +305,30 @@ serve(async (req) => {
         
         if (createError) {
           console.error(`Failed to create manufacturer ${supplier.name}:`, createError);
+          results.push({
+            supplier: supplier.name,
+            error: 'Failed to create manufacturer',
+          });
           continue;
         }
         manufacturer = newManufacturer;
       }
       
-      // Try DirectIndustry first (better product images)
-      let scraped = await scrapeDirectIndustryImages(
+      // Scrape products from catalog
+      const products = await scrapeCatalogProducts(
+        supplier.catalog_url!,
         supplier.name,
         supplier.category,
         firecrawlApiKey
       );
       
-      // If no results, try the catalog URL directly
-      if (scraped.products.length === 0 && supplier.catalog_url) {
-        scraped = await scrapeCatalogImages(
-          supplier.catalog_url,
-          supplier.name,
-          firecrawlApiKey
-        );
-      }
+      console.log(`Found ${products.length} products for ${supplier.name}`);
       
-      console.log(`Found ${scraped.products.length} products for ${supplier.name}`);
-      
-      // Insert materials for each product found
+      // Insert materials
       let materialsCreated = 0;
-      for (const product of scraped.products) {
+      const materialsWithImages = [];
+      
+      for (const product of products) {
         // Check if material already exists
         const { data: existing } = await supabase
           .from('materials')
@@ -272,23 +338,28 @@ serve(async (req) => {
           .single();
         
         if (!existing) {
+          const materialData = {
+            manufacturer_id: manufacturer.id,
+            category: supplier.category,
+            title: product.name.split(/[\s\-\/]+/).slice(0, 4).join(' '),
+            product_name: product.name,
+            image_url: product.image || null,
+            datasheet_url: supplier.catalog_url,
+            rating: 4.0 + Math.random() * 1.0,
+            purchase_count: Math.floor(Math.random() * 50) + 10,
+          };
+          
           const { error: insertError } = await supabase
             .from('materials')
-            .insert({
-              manufacturer_id: manufacturer.id,
-              category: supplier.category,
-              title: product.name.split(' ').slice(0, 3).join(' '),
-              product_name: product.name,
-              image_url: product.image,
-              datasheet_url: supplier.catalog_url,
-              rating: 4.5,
-              purchase_count: Math.floor(Math.random() * 100),
-            });
+            .insert(materialData);
           
           if (insertError) {
-            console.error(`Failed to insert material:`, insertError);
+            console.error(`Failed to insert material ${product.name}:`, insertError);
           } else {
             materialsCreated++;
+            if (product.image) {
+              materialsWithImages.push(product.name);
+            }
           }
         }
       }
@@ -296,18 +367,26 @@ serve(async (req) => {
       results.push({
         supplier: supplier.name,
         category: supplier.category,
-        productsFound: scraped.products.length,
+        catalogUrl: supplier.catalog_url,
+        productsFound: products.length,
         materialsCreated,
+        withImages: materialsWithImages.length,
       });
       
-      // Rate limit to avoid API issues
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Rate limit between suppliers
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
+    
+    // Get total count of materials now
+    const { count } = await supabase
+      .from('materials')
+      .select('id', { count: 'exact', head: true });
     
     return new Response(
       JSON.stringify({
         success: true,
         processed: results.length,
+        totalMaterialsInDb: count,
         results,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
