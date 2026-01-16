@@ -48,9 +48,49 @@ const Materials = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // Fetch materials from database
+  // Search materials from database - server-side search for all 12,785+ items
+  const searchMaterials = async (query: string) => {
+    setLoading(true);
+    try {
+      let queryBuilder = supabase
+        .from('materials')
+        .select(`
+          *,
+          manufacturer:manufacturers(name, logo_url)
+        `);
+
+      if (query.trim()) {
+        // Server-side search using ilike for flexible matching
+        const searchTerm = `%${query.trim()}%`;
+        queryBuilder = queryBuilder.or(
+          `title.ilike.${searchTerm},product_name.ilike.${searchTerm},model_number.ilike.${searchTerm},serial_number.ilike.${searchTerm},category.ilike.${searchTerm}`
+        );
+      }
+
+      const { data, error } = await queryBuilder
+        .order('purchase_count', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error searching materials:', error);
+      toast({
+        title: "Search error",
+        description: "Could not search materials. Please try again.",
+        variant: "destructive",
+      });
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load - don't fetch anything until user searches
   useEffect(() => {
-    const fetchMaterials = async () => {
+    // Load a sample of popular items for initial display
+    const loadInitialMaterials = async () => {
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -60,28 +100,21 @@ const Materials = () => {
             manufacturer:manufacturers(name, logo_url)
           `)
           .order('purchase_count', { ascending: false })
-          .limit(200);
+          .limit(20);
 
         if (error) throw error;
-        
         setAllMaterials(data || []);
-        setMaterials(data || []);
       } catch (error) {
-        console.error('Error fetching materials:', error);
-        toast({
-          title: "Error loading materials",
-          description: "Could not load materials. Please try again.",
-          variant: "destructive",
-        });
+        console.error('Error loading materials:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMaterials();
-  }, [toast]);
+    loadInitialMaterials();
+  }, []);
 
-  // Apply search filter with exact match detection
+  // Apply server-side search when query changes
   useEffect(() => {
     if (!activeSearchQuery.trim()) {
       setMaterials(allMaterials);
@@ -90,82 +123,53 @@ const Materials = () => {
       return;
     }
 
-    const query = activeSearchQuery.toLowerCase().trim();
-    const queryWords = query.split(/\s+/).filter(w => w.length > 1);
-    
-    // Score each material based on how well it matches
-    const scoredMaterials = allMaterials.map(material => {
-      const title = material.title?.toLowerCase() || "";
-      const productName = material.product_name?.toLowerCase() || "";
-      const serialNumber = material.serial_number?.toLowerCase() || "";
-      const modelNumber = material.model_number?.toLowerCase() || "";
-      const manufacturerName = material.manufacturer?.name?.toLowerCase() || "";
-      const category = material.category?.toLowerCase() || "";
+    // Perform server-side search
+    const performSearch = async () => {
+      const results = await searchMaterials(activeSearchQuery);
       
-      let score = 0;
-      
-      // Exact matches get highest score (recognized by AI or exact string match)
-      if (serialNumber === query || modelNumber === query) score = 100;
-      else if (title === query || productName === query) score = 95;
-      // Starts with query gets high score
-      else if (serialNumber.startsWith(query) || modelNumber.startsWith(query)) score = 90;
-      else if (title.startsWith(query) || productName.startsWith(query)) score = 85;
-      // Contains exact query gets good score
-      else if (serialNumber.includes(query) || modelNumber.includes(query)) score = 75;
-      else if (title.includes(query) || productName.includes(query)) score = 70;
-      else if (manufacturerName.includes(query)) score = 60;
-      // Multi-word matching - partial word matches
-      else {
-        let wordMatches = 0;
-        for (const word of queryWords) {
-          if (title.includes(word) || productName.includes(word)) wordMatches += 2;
-          else if (manufacturerName.includes(word)) wordMatches += 1;
-          else if (category.includes(word)) wordMatches += 1;
-        }
-        if (wordMatches > 0) {
-          score = Math.min(50, wordMatches * 10);
-        }
+      if (results.length === 0) {
+        setMaterials([]);
+        setExactMatch(null);
+        setOtherResults([]);
+        return;
       }
-      
-      return { material, score };
-    }).filter(item => item.score > 0)
-      .sort((a, b) => b.score - a.score);
 
-    const filtered = scoredMaterials.map(item => item.material);
-    
-    // If we have a high-scoring match (85+), treat it as exact match found
-    if (scoredMaterials.length > 0 && scoredMaterials[0].score >= 85) {
-      setExactMatch(scoredMaterials[0].material);
-      // Get at least 10 other suggestions, up to 20
-      const suggestions = filtered.slice(1, 21);
-      // If not enough results, pad with category-similar items
-      if (suggestions.length < 10) {
-        const matchedCategory = scoredMaterials[0].material.category;
-        const additionalItems = allMaterials
-          .filter(m => m.category === matchedCategory && m.id !== scoredMaterials[0].material.id)
-          .filter(m => !suggestions.some(s => s.id === m.id))
-          .slice(0, 10 - suggestions.length);
-        suggestions.push(...additionalItems);
+      const query = activeSearchQuery.toLowerCase().trim();
+      
+      // Score results to find best match
+      const scoredMaterials = results.map(material => {
+        const title = material.title?.toLowerCase() || "";
+        const productName = material.product_name?.toLowerCase() || "";
+        const serialNumber = material.serial_number?.toLowerCase() || "";
+        const modelNumber = material.model_number?.toLowerCase() || "";
+        
+        let score = 0;
+        
+        if (serialNumber === query || modelNumber === query) score = 100;
+        else if (title === query || productName === query) score = 95;
+        else if (serialNumber?.startsWith(query) || modelNumber?.startsWith(query)) score = 90;
+        else if (title.startsWith(query) || productName.startsWith(query)) score = 85;
+        else if (serialNumber?.includes(query) || modelNumber?.includes(query)) score = 75;
+        else if (title.includes(query) || productName.includes(query)) score = 70;
+        else score = 50;
+        
+        return { material, score };
+      }).sort((a, b) => b.score - a.score);
+
+      // If top result has high score, show as exact match
+      if (scoredMaterials[0].score >= 85) {
+        setExactMatch(scoredMaterials[0].material);
+        setOtherResults(scoredMaterials.slice(1).map(s => s.material));
+        setMaterials(scoredMaterials.map(s => s.material));
+      } else {
+        setExactMatch(null);
+        setOtherResults([]);
+        setMaterials(scoredMaterials.map(s => s.material));
       }
-      setOtherResults(suggestions);
-      setMaterials([scoredMaterials[0].material, ...suggestions]);
-    } else {
-      setExactMatch(null);
-      setOtherResults([]);
-      // Show up to 20 search results, pad with related items if needed
-      let searchResults = filtered.slice(0, 20);
-      if (searchResults.length < 20 && searchResults.length > 0) {
-        // Get items from same category as top result
-        const topCategory = searchResults[0].category;
-        const additionalItems = allMaterials
-          .filter(m => m.category === topCategory)
-          .filter(m => !searchResults.some(s => s.id === m.id))
-          .slice(0, 20 - searchResults.length);
-        searchResults = [...searchResults, ...additionalItems];
-      }
-      setMaterials(searchResults);
-    }
-  }, [activeSearchQuery, allMaterials]);
+    };
+
+    performSearch();
+  }, [activeSearchQuery]);
 
   const handleCameraClick = () => {
     if (fileInputRef.current) {
@@ -236,7 +240,10 @@ const Materials = () => {
       {/* Search Bar - Only show centered when no search results */}
       {!activeSearchQuery && (
         <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
-          <h1 className="text-4xl font-bold text-foreground mb-8">Material Search</h1>
+          <h1 className="text-4xl font-bold text-foreground mb-4">Material Search</h1>
+          <p className="text-muted-foreground mb-6 text-center">
+            Search across <span className="font-semibold text-foreground">12,785+</span> equipment items or take a photo to identify
+          </p>
           <div className="w-full max-w-2xl">
             <SearchBar
               placeholder="Material Description, Serial Number, Model Number etc."
