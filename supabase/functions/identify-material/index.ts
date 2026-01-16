@@ -8,34 +8,23 @@ const corsHeaders = {
 
 // Equipment catalog data for finding catalog URLs
 const equipmentCatalog = [
-  // Valves
   { name: "Balon Corporation", category: "Valves", catalogUrls: ["https://www.balon.com/downloads/CompleteCatalog.pdf"] },
   { name: "Bray International", category: "Valves", catalogUrls: ["https://www.bray.com/products"] },
   { name: "Kimray", category: "Valves", catalogUrls: ["https://kimray.com/products"] },
-  { name: "Franklin Valve", category: "Valves", catalogUrls: ["https://www.franklinvalve.com/products"] },
   { name: "Flowserve", category: "Valves", catalogUrls: ["https://www.flowserve.com/products/products-catalog/valves"] },
   { name: "Fisher", category: "Valves", catalogUrls: ["https://www.emerson.com/en-us/automation/fisher"] },
   { name: "Cameron", category: "Valves", catalogUrls: ["https://www.slb.com/valves"] },
   { name: "Velan", category: "Valves", catalogUrls: ["https://www.velan.com/products"] },
-  { name: "Bonney Forge", category: "Valves", catalogUrls: ["https://bonneyforge.com/products/valves.php"] },
-  { name: "Victaulic", category: "Valves", catalogUrls: ["https://www.victaulic.com/products"] },
   { name: "Crane", category: "Valves", catalogUrls: ["https://www.craneco.com/industrial-valves"] },
   { name: "Baker Hughes", category: "Valves", catalogUrls: ["https://www.bakerhughes.com/products/valves"] },
   { name: "Swagelok", category: "Valves", catalogUrls: ["https://www.swagelok.com/en/catalog/Products/Valve"] },
   { name: "Emerson", category: "Automation", catalogUrls: ["https://www.emerson.com/en-us/automation"] },
-  { name: "Rosemount", category: "Automation", catalogUrls: ["https://www.emerson.com/en-us/automation/rosemount"] },
   { name: "Siemens", category: "Automation", catalogUrls: ["https://www.siemens.com/products"] },
-  { name: "Honeywell", category: "Automation", catalogUrls: ["https://process.honeywell.com/products"] },
   { name: "ABB", category: "Automation", catalogUrls: ["https://new.abb.com/process-automation"] },
-  { name: "Yokogawa", category: "Automation", catalogUrls: ["https://www.yokogawa.com/products"] },
   { name: "Goulds Pumps", category: "Pumps", catalogUrls: ["https://www.gouldspumps.com/products"] },
-  { name: "Xylem", category: "Pumps", catalogUrls: ["https://www.xylem.com/products"] },
   { name: "Sulzer", category: "Pumps", catalogUrls: ["https://www.sulzer.com/en/products/pumps"] },
   { name: "KSB", category: "Pumps", catalogUrls: ["https://www.ksb.com/products"] },
   { name: "Grundfos", category: "Pumps", catalogUrls: ["https://product-selection.grundfos.com/products"] },
-  { name: "Weir", category: "Pumps", catalogUrls: ["https://www.global.weir/products"] },
-  { name: "Ebara", category: "Pumps", catalogUrls: ["https://www.ebara.com/products"] },
-  { name: "Pentair", category: "Pumps", catalogUrls: ["https://www.pentair.com/products/pumps"] },
 ];
 
 // Find catalog URL for a manufacturer
@@ -48,148 +37,78 @@ const findCatalogUrl = (manufacturerName: string): string | null => {
   return manufacturer?.catalogUrls[0] || null;
 };
 
-// Scrape product images from manufacturer catalog using Firecrawl
-async function scrapeProductImages(manufacturerName: string, productType: string, catalogUrl: string): Promise<{ images: string[], screenshot?: string }> {
-  const apiKey = Deno.env.get('FIRECRAWL_API_KEY');
-  if (!apiKey) {
-    console.log('FIRECRAWL_API_KEY not configured, skipping image scraping');
-    return { images: [] };
-  }
-
-  try {
-    console.log(`Scraping ${catalogUrl} for ${productType} images...`);
-    
-    // Use Firecrawl search to find product-specific pages
-    const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: `${manufacturerName} ${productType} product image`,
-        limit: 5,
-        scrapeOptions: {
-          formats: ['markdown', 'links']
-        }
-      }),
-    });
-
-    let productImages: string[] = [];
-    let screenshot: string | undefined;
-
-    if (searchResponse.ok) {
-      const searchData = await searchResponse.json();
-      console.log('Search results:', searchData.data?.length || 0);
-      
-      // Extract image URLs from search results
-      for (const result of searchData.data || []) {
-        const links = result.links || [];
-        const imageLinks = links.filter((link: string) => {
-          const lower = link.toLowerCase();
-          return lower.endsWith('.jpg') || 
-                 lower.endsWith('.jpeg') || 
-                 lower.endsWith('.png') || 
-                 lower.endsWith('.webp') ||
-                 lower.includes('/images/') ||
-                 lower.includes('/product');
-        });
-        productImages.push(...imageLinks);
-      }
-    }
-
-    // If no images from search, try direct scrape of catalog URL
-    if (productImages.length === 0) {
-      console.log('No images from search, trying direct scrape...');
-      
-      const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          url: catalogUrl,
-          formats: ['links', 'screenshot'],
-          onlyMainContent: true,
-          waitFor: 2000,
-        }),
-      });
-
-      if (scrapeResponse.ok) {
-        const scrapeData = await scrapeResponse.json();
-        const links = scrapeData.data?.links || [];
-        screenshot = scrapeData.data?.screenshot;
-        
-        // Filter for product images
-        productImages = links.filter((link: string) => {
-          const lower = link.toLowerCase();
-          const productLower = productType.toLowerCase();
-          return (lower.endsWith('.jpg') || 
-                  lower.endsWith('.jpeg') || 
-                  lower.endsWith('.png') || 
-                  lower.endsWith('.webp')) &&
-                 (lower.includes('product') || 
-                  lower.includes(productLower) ||
-                  lower.includes('catalog'));
-        });
-      }
-    }
-
-    console.log(`Found ${productImages.length} product images`);
-    return { 
-      images: [...new Set(productImages)].slice(0, 5),
-      screenshot 
-    };
-  } catch (error) {
-    console.error('Error scraping images:', error);
-    return { images: [] };
-  }
-}
-
-// Compare captured image with scraped product images using AI
-async function compareImagesWithAI(
+// Compare captured image with database material images using AI
+async function compareWithDatabaseImages(
   capturedImage: string, 
-  productImages: string[], 
-  identification: any,
+  materials: any[],
+  initialIdentification: any,
   apiKey: string
-): Promise<{ bestMatch: string | null, confidence: number, matchDetails: string }> {
-  if (productImages.length === 0) {
-    return { bestMatch: null, confidence: 0, matchDetails: 'No product images available for comparison' };
+): Promise<{ matchedMaterial: any | null, confidence: number, matchDetails: string }> {
+  if (materials.length === 0) {
+    return { matchedMaterial: null, confidence: 0, matchDetails: 'No materials in database to compare' };
   }
 
   try {
-    const imageContent = [
+    // Filter materials that have images and are in similar category
+    const materialsWithImages = materials.filter(m => 
+      m.image_url && 
+      (m.category?.toLowerCase() === initialIdentification.category?.toLowerCase() ||
+       initialIdentification.category === 'Unknown')
+    ).slice(0, 8); // Limit to 8 for API efficiency
+
+    if (materialsWithImages.length === 0) {
+      console.log('No materials with images found in matching category');
+      return { matchedMaterial: null, confidence: 0, matchDetails: 'No matching materials with images' };
+    }
+
+    console.log(`Comparing captured image against ${materialsWithImages.length} database materials...`);
+
+    // Create comparison prompt with database images
+    const imageContent: any[] = [
       {
         type: "text",
-        text: `You are analyzing an industrial equipment image to find the best matching product.
+        text: `You are analyzing industrial equipment images to find an exact or closest match.
 
-The equipment has been identified as:
-- Category: ${identification.category}
-- Type: ${identification.type}
-- Manufacturer: ${identification.manufacturer}
-- Features: ${identification.features?.join(', ') || 'Unknown'}
+The captured equipment appears to be:
+- Category: ${initialIdentification.category}
+- Type: ${initialIdentification.type}
+- Manufacturer: ${initialIdentification.manufacturer}
 
-Compare the FIRST image (captured by user) with the following product images from the manufacturer's catalog. 
-Determine which product image is the closest visual match to the captured image.
+I have a captured image (IMAGE 1) and ${materialsWithImages.length} product images from our database.
+Compare the captured image to each database product image and find the BEST MATCH.
+
+Database products:
+${materialsWithImages.map((m, i) => `${i + 2}. ${m.title} - ${m.product_name} (${m.manufacturer?.name || 'Unknown manufacturer'})`).join('\n')}
+
+Analyze visual features like:
+- Shape and form factor
+- Size and proportions
+- Color and material finish
+- Brand markings and labels
+- Valve/pump type and design
+- Connection types
 
 Respond in JSON format:
 {
-  "bestMatchIndex": <0-based index of best matching image, or -1 if no good match>,
-  "confidence": <0-100>,
+  "bestMatchIndex": <1-based index of best matching database product (2-${materialsWithImages.length + 1}), or 0 if no good match>,
+  "confidence": <0-100 confidence score>,
   "matchDetails": "explanation of why this is the best match",
-  "productName": "likely product name/model if identifiable"
+  "isExactMatch": <true if this appears to be the exact same product, false if similar>
 }`
       },
       {
         type: "image_url",
         image_url: { url: capturedImage }
-      },
-      ...productImages.slice(0, 3).map((img, idx) => ({
-        type: "image_url",
-        image_url: { url: img }
-      }))
+      }
     ];
+
+    // Add database material images
+    for (const material of materialsWithImages) {
+      imageContent.push({
+        type: "image_url",
+        image_url: { url: material.image_url }
+      });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -206,31 +125,35 @@ Respond in JSON format:
     });
 
     if (!response.ok) {
-      console.error('AI comparison failed:', response.status);
-      return { bestMatch: null, confidence: 0, matchDetails: 'AI comparison failed' };
+      console.error('AI image comparison failed:', response.status);
+      return { matchedMaterial: null, confidence: 0, matchDetails: 'AI comparison failed' };
     }
 
     const data = await response.json();
     const aiResponse = data.choices[0].message.content;
+    
+    console.log('AI comparison response:', aiResponse);
     
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const result = JSON.parse(jsonMatch[0]);
       const matchIndex = result.bestMatchIndex;
       
-      if (matchIndex >= 0 && matchIndex < productImages.length) {
+      // Index 2 in the prompt = index 0 in materialsWithImages array
+      if (matchIndex >= 2 && matchIndex <= materialsWithImages.length + 1) {
+        const matchedMaterial = materialsWithImages[matchIndex - 2];
         return {
-          bestMatch: productImages[matchIndex],
+          matchedMaterial,
           confidence: result.confidence || 70,
-          matchDetails: result.matchDetails || 'Match found'
+          matchDetails: result.matchDetails || 'Match found in database'
         };
       }
     }
 
-    return { bestMatch: null, confidence: 0, matchDetails: 'No matching product found' };
+    return { matchedMaterial: null, confidence: 0, matchDetails: 'No matching product found in database' };
   } catch (error) {
-    console.error('Error comparing images:', error);
-    return { bestMatch: null, confidence: 0, matchDetails: 'Comparison error' };
+    console.error('Error comparing with database images:', error);
+    return { matchedMaterial: null, confidence: 0, matchDetails: 'Comparison error' };
   }
 }
 
@@ -266,7 +189,6 @@ serve(async (req) => {
     const body = await req.json();
     const { image } = body;
 
-    // Input validation
     if (!image || typeof image !== 'string') {
       return new Response(
         JSON.stringify({ error: 'Invalid image data' }),
@@ -274,7 +196,6 @@ serve(async (req) => {
       );
     }
 
-    // Size limit: 10MB
     if (image.length > 10485760) {
       return new Response(
         JSON.stringify({ error: 'Image size exceeds 10MB limit' }),
@@ -288,24 +209,44 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch all equipment suppliers from the database
-    const { data: suppliers, error: suppliersError } = await supabaseClient
+    // Fetch materials with images from database
+    const { data: allMaterials, error: materialsError } = await supabaseClient
+      .from('materials')
+      .select(`
+        id, title, product_name, category, image_url, model_number, serial_number,
+        manufacturer_id, rating, datasheet_url,
+        manufacturer:manufacturers(id, name, logo_url)
+      `)
+      .not('image_url', 'is', null)
+      .limit(500);
+
+    if (materialsError) {
+      console.error("Error fetching materials:", materialsError);
+    }
+
+    const materials = allMaterials || [];
+    console.log(`Loaded ${materials.length} materials with images from database`);
+
+    // Get unique categories from materials
+    const categories = [...new Set(materials.map(m => m.category))].filter(Boolean);
+    console.log("Available categories:", categories.join(', '));
+    
+    // Extract manufacturer names (handle array result from join)
+    const getManufacturerName = (m: any) => {
+      if (Array.isArray(m.manufacturer)) {
+        return m.manufacturer[0]?.name;
+      }
+      return m.manufacturer?.name;
+    };
+
+    // Fetch equipment suppliers
+    const { data: suppliers } = await supabaseClient
       .from('equipment_suppliers')
       .select('*');
 
-    if (suppliersError) {
-      console.error("Error fetching suppliers:", suppliersError);
-    }
+    const manufacturersList = [...new Set(materials.map(m => getManufacturerName(m)).filter(Boolean))].join(', ');
 
-    // Create lists for AI prompt
-    const manufacturersList = suppliers?.map(s => s.name).join(', ') || equipmentCatalog.map(e => e.name).join(', ');
-    const categoriesList = [...new Set([
-      ...(suppliers?.map(s => s.category) || []),
-      ...equipmentCatalog.map(e => e.category)
-    ])].join(', ');
-
-    console.log("Step 1: Analyzing equipment image with AI...");
-    console.log("Known categories:", categoriesList);
+    console.log("Step 1: Initial AI identification of equipment...");
 
     // Step 1: Initial AI identification
     const identifyResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -319,33 +260,29 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert in oil and gas industry equipment identification. You have access to a database of equipment suppliers in these categories: ${categoriesList}.
+            content: `You are an expert in oil and gas industry equipment identification.
 
+Available categories in our database: ${categories.join(', ')}
 Known manufacturers in our database: ${manufacturersList}
 
-Analyze images of industrial equipment and identify:
-1. Equipment category (must be one of: ${categoriesList})
-2. Specific equipment type (e.g., ball valve, gate valve, control valve, centrifugal pump, pressure gauge, etc.)
-3. Manufacturer - Try to match to one of our known manufacturers if visible on the equipment
-4. Material composition if visible (stainless steel, carbon steel, brass, etc.)
-5. Size/specifications if visible
-6. Key identifying features (brand markings, model numbers, distinctive design elements)
+Analyze the image and identify:
+1. Equipment category (MUST be one of: ${categories.join(', ')})
+2. Specific equipment type (e.g., ball valve, gate valve, control valve, centrifugal pump, pressure gauge)
+3. Manufacturer - Match to known manufacturers if visible
+4. Material if visible (stainless steel, carbon steel, brass)
+5. Key identifying features
 
-IMPORTANT: Look carefully for:
-- Brand logos or text on the equipment
-- Model numbers or part numbers
-- Distinctive design features unique to specific manufacturers
+Look carefully for brand logos, model numbers, and distinctive design elements.
 
-Respond in JSON format with:
+Respond in JSON format:
 {
-  "category": "Valves|Pumps|Tanks|Vessels|Automation|Instrumentation",
+  "category": "one of the categories above",
   "type": "specific equipment type",
-  "manufacturer": "exact manufacturer name from our database or 'Unknown'",
+  "manufacturer": "manufacturer name or 'Unknown'",
   "material": "material type if visible",
-  "size": "size/specs if visible",
   "confidence": 0-100,
   "features": ["feature1", "feature2"],
-  "description": "brief description of what was identified",
+  "description": "brief description",
   "searchTerms": ["keyword1", "keyword2"],
   "modelNumber": "model/part number if visible"
 }`
@@ -355,7 +292,7 @@ Respond in JSON format with:
             content: [
               {
                 type: "text",
-                text: "Identify this oil and gas equipment. Look for brand markings, model numbers, and match the manufacturer to our database if possible:"
+                text: "Identify this industrial equipment. Look for brand markings and model numbers:"
               },
               {
                 type: "image_url",
@@ -374,8 +311,6 @@ Respond in JSON format with:
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      const errorText = await identifyResponse.text();
-      console.error("AI gateway error:", identifyResponse.status, errorText);
       throw new Error(`AI analysis failed: ${identifyResponse.status}`);
     }
 
@@ -384,7 +319,6 @@ Respond in JSON format with:
     
     console.log("AI identification response:", aiResponse);
     
-    // Parse the JSON response
     const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
     const identification = jsonMatch ? JSON.parse(jsonMatch[0]) : {
       category: "Unknown",
@@ -395,64 +329,42 @@ Respond in JSON format with:
       searchTerms: []
     };
 
-    console.log("Step 2: Scraping product images from manufacturer catalogs...");
+    console.log("Step 2: Comparing captured image against database materials...");
 
-    // Step 2: Find catalog URL and scrape product images
-    let scrapedImages: { images: string[], screenshot?: string } = { images: [] };
-    let catalogUrl = findCatalogUrl(identification.manufacturer);
+    // Step 2: Compare with database images
+    const dbMatchResult = await compareWithDatabaseImages(
+      image,
+      materials,
+      identification,
+      LOVABLE_API_KEY
+    );
+
+    console.log("Database match result:", dbMatchResult.matchedMaterial?.title || 'No match', dbMatchResult.confidence);
+
+    // Step 3: Find similar materials based on search terms
+    let similarMaterials: any[] = [];
     
-    // Also check suppliers table for catalog URL
-    if (!catalogUrl && suppliers) {
-      const supplierMatch = suppliers.find(s => 
-        s.name.toLowerCase().includes(identification.manufacturer.toLowerCase()) ||
-        identification.manufacturer.toLowerCase().includes(s.name.toLowerCase())
-      );
-      if (supplierMatch?.catalog_url) {
-        catalogUrl = supplierMatch.catalog_url;
-      }
-    }
-
-    if (catalogUrl) {
-      scrapedImages = await scrapeProductImages(
-        identification.manufacturer, 
-        identification.type,
-        catalogUrl
-      );
-    } else if (identification.category !== 'Unknown') {
-      // Try to find any manufacturer in the same category
-      const categoryManufacturers = equipmentCatalog.filter(
-        e => e.category.toLowerCase() === identification.category.toLowerCase()
-      );
+    if (dbMatchResult.matchedMaterial) {
+      // Get materials similar to the matched one
+      const matchedCategory = dbMatchResult.matchedMaterial.category;
+      const matchedManufacturer = getManufacturerName(dbMatchResult.matchedMaterial);
       
-      if (categoryManufacturers.length > 0) {
-        const firstCatalog = categoryManufacturers[0].catalogUrls[0];
-        scrapedImages = await scrapeProductImages(
-          categoryManufacturers[0].name,
-          identification.type,
-          firstCatalog
-        );
-      }
+      similarMaterials = materials
+        .filter(m => 
+          m.id !== dbMatchResult.matchedMaterial.id &&
+          (m.category === matchedCategory || getManufacturerName(m) === matchedManufacturer)
+        )
+        .slice(0, 10);
+    } else if (identification.category !== 'Unknown') {
+      // Get materials from the same category
+      similarMaterials = materials
+        .filter(m => m.category?.toLowerCase() === identification.category?.toLowerCase())
+        .slice(0, 10);
     }
 
-    console.log(`Step 3: Comparing images (${scrapedImages.images.length} scraped images)...`);
-
-    // Step 3: Compare captured image with scraped images
-    let matchResult = { bestMatch: null as string | null, confidence: 0, matchDetails: '' };
-    
-    if (scrapedImages.images.length > 0) {
-      matchResult = await compareImagesWithAI(
-        image,
-        scrapedImages.images,
-        identification,
-        LOVABLE_API_KEY
-      );
-    }
-
-    // Find matching suppliers from the database
+    // Find matching suppliers
     let matchedSuppliers: any[] = [];
-    
     if (suppliers && suppliers.length > 0) {
-      // First, try to match by manufacturer name
       if (identification.manufacturer && identification.manufacturer !== "Unknown") {
         matchedSuppliers = suppliers.filter(s => 
           s.name.toLowerCase().includes(identification.manufacturer.toLowerCase()) ||
@@ -460,33 +372,32 @@ Respond in JSON format with:
         );
       }
       
-      // If no manufacturer match, filter by category
       if (matchedSuppliers.length === 0 && identification.category) {
         matchedSuppliers = suppliers.filter(s => 
           s.category.toLowerCase() === identification.category.toLowerCase()
         );
       }
       
-      // Limit to top 5 results
       matchedSuppliers = matchedSuppliers.slice(0, 5);
     }
 
-    // Add scraped product image to the response
-    const bestProductImage = matchResult.bestMatch || scrapedImages.images[0] || scrapedImages.screenshot;
+    const catalogUrl = findCatalogUrl(identification.manufacturer);
 
-    console.log("Identification complete. Matched suppliers:", matchedSuppliers.length);
-    console.log("Best product image found:", bestProductImage ? 'Yes' : 'No');
+    console.log("Identification complete.");
+    console.log("Database match:", dbMatchResult.matchedMaterial ? 'Yes' : 'No');
+    console.log("Similar materials found:", similarMaterials.length);
 
     return new Response(
       JSON.stringify({
         identification: {
           ...identification,
-          productImage: bestProductImage,
-          imageMatchConfidence: matchResult.confidence,
-          matchDetails: matchResult.matchDetails
+          productImage: dbMatchResult.matchedMaterial?.image_url,
+          imageMatchConfidence: dbMatchResult.confidence,
+          matchDetails: dbMatchResult.matchDetails
         },
+        matchedMaterial: dbMatchResult.matchedMaterial,
+        similarMaterials,
         matchedSuppliers,
-        scrapedImages: scrapedImages.images,
         catalogUrl
       }),
       {
@@ -502,8 +413,9 @@ Respond in JSON format with:
           category: "Unknown",
           confidence: 0
         },
-        matchedSuppliers: [],
-        scrapedImages: []
+        matchedMaterial: null,
+        similarMaterials: [],
+        matchedSuppliers: []
       }),
       {
         status: 500,

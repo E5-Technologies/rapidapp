@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, ExternalLink, Phone, Mail, Camera, Upload, X, CheckCircle2, Image } from "lucide-react";
+import { Loader2, ExternalLink, Phone, Mail, Camera, Upload, X, CheckCircle2, Image, FileText, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +18,28 @@ interface EquipmentSupplier {
   email: string | null;
   contact_name: string | null;
   description: string | null;
+}
+
+interface MatchedMaterial {
+  id: string;
+  title: string;
+  product_name: string;
+  category: string;
+  image_url: string | null;
+  model_number?: string | null;
+  serial_number?: string | null;
+  rating: number;
+  datasheet_url: string | null;
+  manufacturer_id: string;
+  manufacturer?: {
+    id: string;
+    name: string;
+    logo_url: string | null;
+  } | {
+    id: string;
+    name: string;
+    logo_url: string | null;
+  }[];
 }
 
 interface IdentificationResult {
@@ -52,9 +74,25 @@ const EquipmentIdentifierDialog = ({
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [identification, setIdentification] = useState<IdentificationResult | null>(null);
+  const [matchedMaterial, setMatchedMaterial] = useState<MatchedMaterial | null>(null);
+  const [similarMaterials, setSimilarMaterials] = useState<MatchedMaterial[]>([]);
   const [matchedSuppliers, setMatchedSuppliers] = useState<EquipmentSupplier[]>([]);
-  const [scrapedImages, setScrapedImages] = useState<string[]>([]);
   const [catalogUrl, setCatalogUrl] = useState<string | null>(null);
+
+  // Helper to get manufacturer name from material
+  const getManufacturerName = (material: MatchedMaterial) => {
+    if (Array.isArray(material.manufacturer)) {
+      return material.manufacturer[0]?.name || 'Unknown';
+    }
+    return material.manufacturer?.name || 'Unknown';
+  };
+
+  const getManufacturerLogo = (material: MatchedMaterial) => {
+    if (Array.isArray(material.manufacturer)) {
+      return material.manufacturer[0]?.logo_url;
+    }
+    return material.manufacturer?.logo_url;
+  };
 
   useEffect(() => {
     if (initialImage && open) {
@@ -68,8 +106,9 @@ const EquipmentIdentifierDialog = ({
       // Reset state when dialog closes
       setCapturedImage(null);
       setIdentification(null);
+      setMatchedMaterial(null);
+      setSimilarMaterials([]);
       setMatchedSuppliers([]);
-      setScrapedImages([]);
       setCatalogUrl(null);
       setIsAnalyzing(false);
     }
@@ -105,8 +144,9 @@ const EquipmentIdentifierDialog = ({
   const analyzeImage = async (imageData: string) => {
     setIsAnalyzing(true);
     setIdentification(null);
+    setMatchedMaterial(null);
+    setSimilarMaterials([]);
     setMatchedSuppliers([]);
-    setScrapedImages([]);
     setCatalogUrl(null);
 
     try {
@@ -129,11 +169,14 @@ const EquipmentIdentifierDialog = ({
 
       const result = response.data;
       setIdentification(result.identification);
+      setMatchedMaterial(result.matchedMaterial || null);
+      setSimilarMaterials(result.similarMaterials || []);
       setMatchedSuppliers(result.matchedSuppliers || []);
-      setScrapedImages(result.scrapedImages || []);
       setCatalogUrl(result.catalogUrl || null);
       
-      if (result.identification?.confidence > 70) {
+      if (result.matchedMaterial) {
+        toast.success(`Found: ${result.matchedMaterial.title}`);
+      } else if (result.identification?.confidence > 70) {
         toast.success(`Identified: ${result.identification.type}`);
       } else {
         toast.info("Equipment identified with low confidence");
@@ -149,10 +192,58 @@ const EquipmentIdentifierDialog = ({
   const clearIdentification = () => {
     setCapturedImage(null);
     setIdentification(null);
+    setMatchedMaterial(null);
+    setSimilarMaterials([]);
     setMatchedSuppliers([]);
-    setScrapedImages([]);
     setCatalogUrl(null);
   };
+
+  const MaterialCard = ({ material, isExactMatch = false }: { material: MatchedMaterial; isExactMatch?: boolean }) => (
+    <Card className={`overflow-hidden ${isExactMatch ? 'border-2 border-green-500 bg-green-50/50 dark:bg-green-950/20' : ''}`}>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex gap-3">
+          {material.image_url && (
+            <img 
+              src={material.image_url} 
+              alt={material.title}
+              className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                {isExactMatch && (
+                  <Badge variant="default" className="mb-1 bg-green-600">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Best Match
+                  </Badge>
+                )}
+                <h3 className="font-semibold text-sm line-clamp-2">{material.title}</h3>
+                <p className="text-xs text-muted-foreground">{getManufacturerName(material)}</p>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-amber-500">
+                <Star className="w-3 h-3 fill-current" />
+                {material.rating?.toFixed(1) || '4.0'}
+              </div>
+            </div>
+            <Badge variant="secondary" className="mt-1 text-xs">{material.category}</Badge>
+            {material.model_number && (
+              <p className="text-xs text-muted-foreground mt-1">Model: {material.model_number}</p>
+            )}
+          </div>
+        </div>
+        
+        {material.datasheet_url && (
+          <Button size="sm" variant="outline" className="w-full" asChild>
+            <a href={material.datasheet_url} target="_blank" rel="noopener noreferrer">
+              <FileText className="w-4 h-4 mr-2" />
+              View Data Sheet
+            </a>
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   const SupplierCard = ({ supplier }: { supplier: EquipmentSupplier }) => (
     <Card className="overflow-hidden">
@@ -176,7 +267,7 @@ const EquipmentIdentifierDialog = ({
             <Button size="sm" variant="default" asChild>
               <a href={supplier.catalog_url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4 mr-1" />
-                Data Sheet
+                Catalog
               </a>
             </Button>
           )}
@@ -184,7 +275,7 @@ const EquipmentIdentifierDialog = ({
             <Button size="sm" variant="outline" asChild>
               <a href={`tel:${supplier.phone}`}>
                 <Phone className="w-4 h-4 mr-1" />
-                {supplier.phone}
+                Call
               </a>
             </Button>
           )}
@@ -226,7 +317,7 @@ const EquipmentIdentifierDialog = ({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    Take a picture of industrial equipment and our AI will identify it and find matching suppliers.
+                    Take a picture of industrial equipment and we'll find matching products in our database.
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <Button onClick={handleCameraCapture} className="h-20 flex-col">
@@ -263,33 +354,40 @@ const EquipmentIdentifierDialog = ({
                       className="w-full h-36 object-cover rounded-lg border-2 border-primary"
                     />
                   </div>
-                  {identification?.productImage ? (
+                  {matchedMaterial?.image_url ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-1">
-                        <p className="text-xs text-muted-foreground">Matched Product</p>
-                        {identification.imageMatchConfidence && identification.imageMatchConfidence > 60 && (
-                          <CheckCircle2 className="w-3 h-3 text-green-500" />
-                        )}
+                        <p className="text-xs text-muted-foreground">Database Match</p>
+                        <CheckCircle2 className="w-3 h-3 text-green-500" />
                       </div>
+                      <img 
+                        src={matchedMaterial.image_url} 
+                        alt="Matched product" 
+                        className="w-full h-36 object-cover rounded-lg border-2 border-green-500"
+                      />
+                      {identification?.imageMatchConfidence && (
+                        <p className="text-xs text-green-600 text-center font-medium">
+                          {identification.imageMatchConfidence}% visual match
+                        </p>
+                      )}
+                    </div>
+                  ) : identification?.productImage ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Matched Product</p>
                       <img 
                         src={identification.productImage} 
                         alt="Matched product" 
                         className="w-full h-36 object-cover rounded-lg border-2 border-green-500"
                       />
-                      {identification.imageMatchConfidence && (
-                        <p className="text-xs text-muted-foreground text-center">
-                          {identification.imageMatchConfidence}% visual match
-                        </p>
-                      )}
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Catalog Match</p>
+                      <p className="text-xs text-muted-foreground">Database Match</p>
                       <div className="w-full h-36 bg-muted rounded-lg flex items-center justify-center border-2 border-dashed">
                         {isAnalyzing ? (
                           <div className="flex flex-col items-center gap-2">
                             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                            <p className="text-xs text-muted-foreground">Searching catalogs...</p>
+                            <p className="text-xs text-muted-foreground">Searching database...</p>
                           </div>
                         ) : (
                           <Image className="w-8 h-8 text-muted-foreground" />
@@ -307,130 +405,111 @@ const EquipmentIdentifierDialog = ({
                 <Loader2 className="w-10 h-10 animate-spin text-primary" />
                 <div className="text-center">
                   <p className="font-medium">Analyzing Equipment...</p>
-                  <p className="text-sm text-muted-foreground">Searching manufacturer catalogs for matching products</p>
+                  <p className="text-sm text-muted-foreground">Comparing against {'>'}12,000 products in our database</p>
                 </div>
               </div>
             )}
 
-            {/* Identification Results */}
-            {identification && !isAnalyzing && (
+            {/* Results */}
+            {!isAnalyzing && (identification || matchedMaterial) && (
               <>
-                <Card className="bg-muted/50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">Identification Result</CardTitle>
-                      <Badge variant={identification.confidence > 70 ? "default" : "secondary"}>
-                        {identification.confidence}% match
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Category</span>
-                        <p className="font-medium">{identification.category}</p>
+                {/* Matched Material from Database */}
+                {matchedMaterial && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                      We Found Your Equipment!
+                    </h3>
+                    <MaterialCard material={matchedMaterial} isExactMatch />
+                  </div>
+                )}
+
+                {/* Identification Details (when no exact match) */}
+                {!matchedMaterial && identification && (
+                  <Card className="bg-muted/50">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">Identification Result</CardTitle>
+                        <Badge variant={identification.confidence > 70 ? "default" : "secondary"}>
+                          {identification.confidence}% confidence
+                        </Badge>
                       </div>
-                      <div>
-                        <span className="text-muted-foreground">Type</span>
-                        <p className="font-medium">{identification.type}</p>
-                      </div>
-                      {identification.manufacturer && identification.manufacturer !== "Unknown" && (
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <span className="text-muted-foreground">Manufacturer</span>
-                          <p className="font-medium">{identification.manufacturer}</p>
+                          <span className="text-muted-foreground">Category</span>
+                          <p className="font-medium">{identification.category}</p>
                         </div>
-                      )}
-                      {identification.material && (
                         <div>
-                          <span className="text-muted-foreground">Material</span>
-                          <p className="font-medium">{identification.material}</p>
+                          <span className="text-muted-foreground">Type</span>
+                          <p className="font-medium">{identification.type}</p>
                         </div>
-                      )}
-                      {identification.size && (
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Size/Specs</span>
-                          <p className="font-medium">{identification.size}</p>
-                        </div>
-                      )}
-                      {identification.modelNumber && (
-                        <div className="col-span-2">
-                          <span className="text-muted-foreground">Model</span>
-                          <p className="font-medium">{identification.modelNumber}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {identification.matchDetails && (
-                      <div className="pt-2 border-t">
-                        <p className="text-xs text-muted-foreground">{identification.matchDetails}</p>
+                        {identification.manufacturer && identification.manufacturer !== "Unknown" && (
+                          <div>
+                            <span className="text-muted-foreground">Manufacturer</span>
+                            <p className="font-medium">{identification.manufacturer}</p>
+                          </div>
+                        )}
+                        {identification.material && (
+                          <div>
+                            <span className="text-muted-foreground">Material</span>
+                            <p className="font-medium">{identification.material}</p>
+                          </div>
+                        )}
                       </div>
-                    )}
 
-                    {identification.description && (
-                      <div>
-                        <span className="text-muted-foreground text-sm">Description</span>
-                        <p className="text-sm mt-1">{identification.description}</p>
-                      </div>
-                    )}
+                      {identification.description && (
+                        <p className="text-sm text-muted-foreground">{identification.description}</p>
+                      )}
 
-                    {identification.features && identification.features.length > 0 && (
-                      <div>
-                        <span className="text-muted-foreground text-sm">Features</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
+                      {identification.features && identification.features.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
                           {identification.features.map((feature, idx) => (
                             <Badge key={idx} variant="outline" className="text-xs">{feature}</Badge>
                           ))}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
-                    {catalogUrl && (
-                      <a 
-                        href={catalogUrl} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-3 h-3" />
-                        View Manufacturer Catalog
-                      </a>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Scraped Product Images */}
-                {scrapedImages.length > 0 && (
-                  <div className="space-y-2">
-                    <h3 className="font-semibold text-sm">Similar Products from Catalog</h3>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {scrapedImages.slice(0, 5).map((img, idx) => (
-                        <img 
-                          key={idx}
-                          src={img} 
-                          alt={`Catalog product ${idx + 1}`}
-                          className="w-16 h-16 object-cover rounded-lg flex-shrink-0 border hover:border-primary cursor-pointer transition-colors"
-                          onClick={() => window.open(img, '_blank')}
-                        />
-                      ))}
-                    </div>
+                {/* Similar Materials */}
+                {similarMaterials.length > 0 && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold">
+                      {matchedMaterial ? 'Similar Products' : 'Related Products'} ({similarMaterials.length})
+                    </h3>
+                    {similarMaterials.slice(0, 5).map(material => (
+                      <MaterialCard key={material.id} material={material} />
+                    ))}
                   </div>
                 )}
 
                 {/* Matched Suppliers */}
-                {matchedSuppliers.length > 0 ? (
+                {matchedSuppliers.length > 0 && (
                   <div className="space-y-3">
-                    <h3 className="font-semibold">Matching Suppliers ({matchedSuppliers.length})</h3>
+                    <h3 className="font-semibold">Suppliers ({matchedSuppliers.length})</h3>
                     {matchedSuppliers.map(supplier => (
                       <SupplierCard key={supplier.id} supplier={supplier} />
                     ))}
                   </div>
-                ) : (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <p>No matching suppliers found in the database.</p>
-                  </div>
                 )}
 
-                {/* New Identification Button */}
+                {/* Catalog Link */}
+                {catalogUrl && (
+                  <a 
+                    href={catalogUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    View Manufacturer Catalog
+                  </a>
+                )}
+
+                {/* Try Again Button */}
                 <Button 
                   onClick={clearIdentification} 
                   variant="outline" 
