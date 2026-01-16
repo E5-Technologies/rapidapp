@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.populate-materials]
 verify_jwt = false
+
+[functions.deep-crawl-products]
+verify_jwt = false
