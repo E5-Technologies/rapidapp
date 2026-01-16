@@ -231,17 +231,69 @@ async function searchDirectIndustry(apiKey: string, manufacturer: string, produc
       }
     }
 
-    // Filter out small icons and prioritize product images
+    // Filter out banners, logos, icons, and non-product images
     const filteredImages = imageUrls.filter(url => {
       const lower = url.toLowerCase();
+      // Exclude common non-product image patterns
       return !lower.includes('icon') && 
              !lower.includes('logo') && 
              !lower.includes('favicon') &&
              !lower.includes('thumb') &&
-             !lower.includes('avatar');
+             !lower.includes('avatar') &&
+             !lower.includes('banner') &&
+             !lower.includes('header') &&
+             !lower.includes('footer') &&
+             !lower.includes('background') &&
+             !lower.includes('social') &&
+             !lower.includes('share') &&
+             !lower.includes('twitter') &&
+             !lower.includes('facebook') &&
+             !lower.includes('linkedin') &&
+             !lower.includes('sprite') &&
+             !lower.includes('placeholder') &&
+             !lower.includes('loading') &&
+             !lower.includes('arrow') &&
+             !lower.includes('button') &&
+             !lower.includes('nav') &&
+             !lower.includes('menu') &&
+             !lower.includes('company-') &&
+             !lower.includes('/brand/') &&
+             !lower.includes('/logos/') &&
+             !lower.includes('_logo') &&
+             !lower.includes('-logo') &&
+             !lower.includes('1x1') &&
+             !lower.includes('pixel') &&
+             // Filter small dimension images often in URLs
+             !/[_-](16|20|24|32|40|48|50|60|64|72|80|90|100)x/i.test(url) &&
+             !/[_-](16|20|24|32|40|48|50|60|64|72|80|90|100)\./i.test(url);
     });
 
-    return filteredImages;
+    // Prioritize images that likely show actual products
+    const prioritizedImages = filteredImages.sort((a, b) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      
+      // Prioritize images with product-related keywords
+      const productKeywords = ['product', 'catalog', 'detail', 'main', 'large', 'full', 'zoom', 'gallery'];
+      const aHasProduct = productKeywords.some(kw => aLower.includes(kw));
+      const bHasProduct = productKeywords.some(kw => bLower.includes(kw));
+      
+      if (aHasProduct && !bHasProduct) return -1;
+      if (!aHasProduct && bHasProduct) return 1;
+      
+      // Prefer larger dimension images
+      const aDimMatch = aLower.match(/[_-](\d{3,4})x/);
+      const bDimMatch = bLower.match(/[_-](\d{3,4})x/);
+      if (aDimMatch && bDimMatch) {
+        return parseInt(bDimMatch[1]) - parseInt(aDimMatch[1]);
+      }
+      if (aDimMatch && !bDimMatch) return -1;
+      if (!aDimMatch && bDimMatch) return 1;
+      
+      return 0;
+    });
+
+    return prioritizedImages;
   } catch (error) {
     console.log('DirectIndustry search error:', error);
     return [];
@@ -437,13 +489,35 @@ async function fallbackSearch(apiKey: string, manufacturerName: string, productN
       }
     }
 
-    console.log('Fallback found images:', imageUrls.length);
+    // Filter out banners, logos, and non-product images
+    const filteredImages = imageUrls.filter(url => {
+      const lower = url.toLowerCase();
+      return !lower.includes('icon') && 
+             !lower.includes('logo') && 
+             !lower.includes('favicon') &&
+             !lower.includes('banner') &&
+             !lower.includes('header') &&
+             !lower.includes('footer') &&
+             !lower.includes('background') &&
+             !lower.includes('social') &&
+             !lower.includes('share') &&
+             !lower.includes('sprite') &&
+             !lower.includes('placeholder') &&
+             !lower.includes('company-') &&
+             !lower.includes('/brand/') &&
+             !lower.includes('/logos/') &&
+             !lower.includes('_logo') &&
+             !lower.includes('-logo') &&
+             !/[_-](16|20|24|32|40|48|50|60|64|72|80|90|100)x/i.test(url);
+    });
+
+    console.log('Fallback found images:', filteredImages.length);
 
     return new Response(
       JSON.stringify({
         success: true,
-        imageUrls: imageUrls.slice(0, 3),
-        allLinks: imageUrls.slice(0, 10),
+        imageUrls: filteredImages.slice(0, 3),
+        allLinks: filteredImages.slice(0, 10),
         source: 'fallback-search'
       }),
       { headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' } }
