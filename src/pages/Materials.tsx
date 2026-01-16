@@ -299,6 +299,7 @@ const Materials = () => {
                   dataSheet={exactMatch.datasheet_url}
                   manufacturerId={exactMatch.manufacturer_id}
                   category={exactMatch.category}
+                  modelNumber={exactMatch.model_number}
                   onContactClick={() => handleContactClick(exactMatch.manufacturer_id, exactMatch.manufacturer?.name || "Unknown")}
                 />
               </div>
@@ -319,6 +320,7 @@ const Materials = () => {
                         dataSheet={material.datasheet_url}
                         manufacturerId={material.manufacturer_id}
                         category={material.category}
+                        modelNumber={material.model_number}
                         onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || "Unknown")}
                       />
                     ))}
@@ -343,6 +345,7 @@ const Materials = () => {
                     dataSheet={material.datasheet_url}
                     manufacturerId={material.manufacturer_id}
                     category={material.category}
+                    modelNumber={material.model_number}
                     onContactClick={() => handleContactClick(material.manufacturer_id, material.manufacturer?.name || 'Unknown')}
                   />
                 ))}
