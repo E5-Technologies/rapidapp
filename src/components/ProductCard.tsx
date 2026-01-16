@@ -272,41 +272,109 @@ const extractProductType = (name: string): string | null => {
   return null;
 };
 
-// Generate a proper description based on product info
+// Technical specifications by category and product type
+const technicalSpecs: Record<string, Record<string, string>> = {
+  'Valves': {
+    'gate valve': 'Rising stem design, API 600/603 compliant, suitable for on/off isolation in high-pressure pipelines',
+    'ball valve': 'Full bore floating ball design, fire-safe certified, bi-directional shutoff with low torque operation',
+    'check valve': 'Swing or piston type, prevents backflow, ASME B16.34 rated for process applications',
+    'globe valve': 'Linear flow control, excellent throttling capability, ANSI Class 150-2500 ratings available',
+    'butterfly valve': 'Wafer or lug type mounting, quarter-turn operation, suitable for large diameter applications',
+    'control valve': 'Pneumatic/electric actuated, precise flow modulation, Cv sizing for process control loops',
+    'relief valve': 'Spring-loaded or pilot-operated, ASME Section VIII certified, protects against overpressure',
+    'safety valve': 'API 520/526 compliant, set pressure calibrated, critical for pressure protection systems',
+    'solenoid valve': '2-way or 3-way configurations, fast response time, suitable for automation circuits',
+    'needle valve': 'Fine flow adjustment, stainless steel construction, ideal for instrumentation applications',
+    'plug valve': 'Lubricated or non-lubricated, bubble-tight shutoff, chemical resistance for harsh media',
+    'diaphragm valve': 'Weir or straight-through design, zero dead leg, ideal for sanitary and corrosive applications',
+    'knife gate valve': 'Unidirectional sealing, handles slurries and viscous media, compact wafer design',
+    'pressure relief valve': 'Automatic pressure limiting, ASME/API certified, prevents system overpressure damage',
+    'default': 'Industrial process valve, designed for reliable isolation and flow control in demanding applications'
+  },
+  'Pumps': {
+    'centrifugal pump': 'Single or multi-stage impeller design, API 610 compliant, high flow rate capability',
+    'submersible pump': 'Fully enclosed motor, designed for underwater operation, corrosion-resistant materials',
+    'diaphragm pump': 'Air-operated double diaphragm (AODD), self-priming, handles abrasive and viscous fluids',
+    'gear pump': 'Positive displacement, consistent flow rate, ideal for high-viscosity fluid transfer',
+    'piston pump': 'High-pressure capability, precision metering, suitable for injection applications',
+    'progressive cavity pump': 'Helical rotor design, gentle pumping action, handles shear-sensitive fluids',
+    'magnetic drive pump': 'Seal-less design, zero leakage, ideal for hazardous and corrosive media',
+    'default': 'Industrial process pump, engineered for reliable fluid transfer and system efficiency'
+  },
+  'Instrumentation': {
+    'pressure gauge': 'Bourdon tube or diaphragm element, accuracy class 0.5-2.5, SS wetted parts available',
+    'flow meter': 'Electromagnetic, ultrasonic, or Coriolis principle, high accuracy measurement, 4-20mA output',
+    'level transmitter': 'Radar, ultrasonic, or guided wave technology, continuous level measurement, HART protocol',
+    'temperature sensor': 'RTD or thermocouple element, wide temperature range, explosion-proof options',
+    'pressure transmitter': 'Piezoresistive or capacitive sensing, 0.1% accuracy, smart diagnostics capability',
+    'default': 'Process instrumentation device, precision measurement for monitoring and control applications'
+  },
+  'Automation': {
+    'control system': 'PLC/DCS integration ready, redundant architecture, real-time process optimization',
+    'actuator': 'Pneumatic, electric, or hydraulic operation, fail-safe positioning, NAMUR compliant',
+    'positioner': 'Digital or analog control, auto-calibration, precise valve positioning feedback',
+    'valve actuator': 'Quarter-turn or linear motion, torque-rated, explosion-proof enclosure options',
+    'pneumatic actuator': 'Double-acting or spring-return, corrosion-resistant body, high cycle life',
+    'electric actuator': 'Multi-turn or quarter-turn, intelligent control, local/remote operation modes',
+    'default': 'Industrial automation component, designed for precise control and system integration'
+  },
+  'Electrical': {
+    'default': 'Industrial electrical equipment, rated for hazardous area classification, IP65+ protection'
+  },
+  'Piping': {
+    'default': 'Process piping component, ASME B31.3 compliant, suitable for high-pressure service'
+  },
+  'Vessels': {
+    'heat exchanger': 'Shell and tube or plate design, TEMA standards, optimized heat transfer efficiency',
+    'pressure vessel': 'ASME Section VIII certified, designed for specified MAWP, corrosion allowance included',
+    'separator': 'Two-phase or three-phase separation, internals for enhanced separation efficiency',
+    'default': 'Industrial pressure vessel, engineered for safe containment of process fluids'
+  },
+  'Tanks': {
+    'storage tank': 'API 650/620 construction, atmospheric or low-pressure service, corrosion protection',
+    'default': 'Industrial storage tank, designed for safe bulk storage of process materials'
+  },
+  'Safety': {
+    'default': 'Industrial safety equipment, certified for personnel and process protection'
+  },
+  'Compressors': {
+    'compressor': 'Reciprocating, screw, or centrifugal type, API 617/618 compliant, high reliability design',
+    'default': 'Industrial compressor, engineered for continuous operation and process gas compression'
+  }
+};
+
+// Generate a proper technical description based on product info
 const generateDescription = (productName: string, category: string, manufacturer: string): string => {
   const productType = extractProductType(productName);
   const cleanedName = cleanProductName(productName, manufacturer);
   
-  // Extract model number if present (e.g., TESCOM™M25, Valtek TX3, RSBV)
+  // Extract model number if present
   const modelMatch = cleanedName.match(/\b([A-Z]{2,}[\d]*[A-Z]*\d*|[A-Z]+\s*[A-Z0-9]+)\b/);
   const model = modelMatch ? modelMatch[1] : null;
   
+  // Get category specs
+  const categorySpecs = technicalSpecs[category] || technicalSpecs['Valves'];
+  
+  // Find matching technical spec
+  let techSpec = categorySpecs['default'] || 'Industrial equipment for process applications';
+  
   if (productType) {
-    if (model) {
-      return `${productType} - Model ${model}`;
+    const typeKey = productType.toLowerCase();
+    if (categorySpecs[typeKey]) {
+      techSpec = categorySpecs[typeKey];
     }
-    return productType;
   }
   
-  // Fallback: use cleaned name or generate from category
-  if (cleanedName && cleanedName.length > 3 && !cleanedName.toLowerCase().includes('catalog')) {
-    return cleanedName;
+  // Build description with model if available
+  if (productType && model) {
+    return `${productType} (${model}) - ${techSpec}`;
+  } else if (productType) {
+    return `${productType} - ${techSpec}`;
+  } else if (model) {
+    return `Model ${model} - ${techSpec}`;
   }
   
-  // Category-based fallback descriptions
-  const categoryDescriptions: Record<string, string> = {
-    'Valves': 'Industrial Valve',
-    'Pumps': 'Industrial Pump',
-    'Instrumentation': 'Process Instrumentation',
-    'Automation': 'Automation Equipment',
-    'Electrical': 'Electrical Equipment',
-    'Piping': 'Piping Component',
-    'Vessels': 'Pressure Vessel',
-    'Tanks': 'Storage Tank',
-    'Safety': 'Safety Equipment',
-  };
-  
-  return categoryDescriptions[category] || 'Industrial Equipment';
+  return techSpec;
 };
 
 // Get appropriate image for a product (without scraping - synchronous check)
