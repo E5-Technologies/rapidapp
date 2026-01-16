@@ -203,6 +203,112 @@ const scrapedImageCache = new Map<string, string | null>();
 // Default fallback for unmatched categories
 const DEFAULT_EQUIPMENT_IMAGE = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop";
 
+// Junk text patterns to remove from product names and titles
+const junkPatterns = [
+  /\s*-\s*pdf\s*catalogs?$/i,
+  /\s*-\s*directindustry.*$/i,
+  /\s*\|\s*directindustry.*$/i,
+  /\s*pdf\s*catalogs?$/i,
+  /all\s+.*\s+catalogs?\s+and\s+technical\s+brochures?/i,
+  /\s*-\s*technical\s+brochures?$/i,
+  /catalogs?\s+and\s+technical\s+brochures?/i,
+  /\s*:\s*hydraulics$/i,
+  /process\s+flow\s+technologies\s+gmbh:\s*/i,
+  /automation\s+solutions\s*-?\s*/i,
+  /\s+by\s+.*\s*-\s*.*$/i,
+  /\s*-\s*[A-Z]+\s*$/,  // Remove trailing brand codes like "- FLOWSERVE"
+  /®\s*/g,
+  /™\s*/g,
+];
+
+// Clean up product name by removing scraped junk text
+const cleanProductName = (name: string, manufacturer?: string): string => {
+  let cleaned = name;
+  
+  // Apply junk patterns
+  for (const pattern of junkPatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  // Remove manufacturer name from start if it's redundant
+  if (manufacturer) {
+    const mfgPattern = new RegExp(`^${manufacturer}\\s*[-|:]?\\s*`, 'i');
+    cleaned = cleaned.replace(mfgPattern, '');
+  }
+  
+  // Clean up extra whitespace and trim
+  cleaned = cleaned.replace(/\s+/g, ' ').trim();
+  
+  // If nothing meaningful remains, return a simplified version
+  if (cleaned.length < 3) {
+    return name.split(/[-|]/)[0].trim();
+  }
+  
+  return cleaned;
+};
+
+// Extract product type from name (e.g., "Ball valve" from "Ball valve - RSBV - FLOWSERVE")
+const extractProductType = (name: string): string | null => {
+  const types = [
+    'gate valve', 'ball valve', 'check valve', 'globe valve', 'butterfly valve',
+    'control valve', 'relief valve', 'safety valve', 'solenoid valve', 
+    'instrumentation valve', 'needle valve', 'plug valve', 'diaphragm valve',
+    'pinch valve', 'knife gate valve', 'pressure relief valve',
+    'centrifugal pump', 'submersible pump', 'diaphragm pump', 'gear pump',
+    'piston pump', 'progressive cavity pump', 'magnetic drive pump',
+    'pressure gauge', 'flow meter', 'level transmitter', 'temperature sensor',
+    'pressure transmitter', 'control system', 'actuator', 'positioner',
+    'valve actuator', 'pneumatic actuator', 'electric actuator',
+    'heat exchanger', 'pressure vessel', 'storage tank', 'separator',
+    'compressor', 'filter', 'strainer', 'regulator',
+  ];
+  
+  const lower = name.toLowerCase();
+  for (const type of types) {
+    if (lower.includes(type)) {
+      return type.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    }
+  }
+  return null;
+};
+
+// Generate a proper description based on product info
+const generateDescription = (productName: string, category: string, manufacturer: string): string => {
+  const productType = extractProductType(productName);
+  const cleanedName = cleanProductName(productName, manufacturer);
+  
+  // Extract model number if present (e.g., TESCOM™M25, Valtek TX3, RSBV)
+  const modelMatch = cleanedName.match(/\b([A-Z]{2,}[\d]*[A-Z]*\d*|[A-Z]+\s*[A-Z0-9]+)\b/);
+  const model = modelMatch ? modelMatch[1] : null;
+  
+  if (productType) {
+    if (model) {
+      return `${productType} - Model ${model}`;
+    }
+    return productType;
+  }
+  
+  // Fallback: use cleaned name or generate from category
+  if (cleanedName && cleanedName.length > 3 && !cleanedName.toLowerCase().includes('catalog')) {
+    return cleanedName;
+  }
+  
+  // Category-based fallback descriptions
+  const categoryDescriptions: Record<string, string> = {
+    'Valves': 'Industrial Valve',
+    'Pumps': 'Industrial Pump',
+    'Instrumentation': 'Process Instrumentation',
+    'Automation': 'Automation Equipment',
+    'Electrical': 'Electrical Equipment',
+    'Piping': 'Piping Component',
+    'Vessels': 'Pressure Vessel',
+    'Tanks': 'Storage Tank',
+    'Safety': 'Safety Equipment',
+  };
+  
+  return categoryDescriptions[category] || 'Industrial Equipment';
+};
+
 // Get appropriate image for a product (without scraping - synchronous check)
 const getProductImageSync = (image: string | null, category: string, title: string): string => {
   // Check if image is a valid product image (not a banner/logo/placeholder)
@@ -356,7 +462,9 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       </div>
       
       <div>
-        <h4 className="font-medium text-xs text-muted-foreground mb-2">{title}</h4>
+        <p className="font-medium text-sm text-foreground mb-2">
+          {generateDescription(product, category || '', company)}
+        </p>
         <div className="relative mb-3">
           {isLoadingImage && (
             <div className="absolute inset-0 bg-muted/50 rounded-lg flex items-center justify-center z-10">
@@ -365,7 +473,7 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
           )}
           <img 
               src={productImage} 
-              alt={product} 
+              alt={cleanProductName(product, company)} 
               className="w-full h-40 object-cover rounded-lg"
               onError={(e) => {
                 const target = e.currentTarget;
@@ -379,7 +487,7 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
             Order
           </Badge>
         </div>
-        <p className="text-sm font-medium">{product}</p>
+        <p className="text-xs text-muted-foreground">{cleanProductName(product, company)}</p>
         <div className="flex items-center gap-1 mt-1">
           {Array.from({ length: 5 }).map((_, i) => (
             <span key={i} className={i < rating ? "text-yellow-500" : "text-muted"}>
