@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.populate-catalog-products]
 verify_jwt = false
+
+[functions.enrich-products]
+verify_jwt = false
