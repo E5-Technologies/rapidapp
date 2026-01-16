@@ -436,10 +436,11 @@ interface ProductCardProps {
   dataSheet?: string | null;
   manufacturerId?: string;
   category?: string;
+  modelNumber?: string | null;
   onContactClick?: () => void;
 }
 
-const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category = '', onContactClick }: ProductCardProps) => {
+const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, manufacturerId, category = '', modelNumber, onContactClick }: ProductCardProps) => {
   const [scrapedImage, setScrapedImage] = useState<string | null>(null);
   const [isLoadingImage, setIsLoadingImage] = useState(false);
   
@@ -460,8 +461,9 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       return;
     }
     
-    // If we already have a good image, skip scraping
+    // If we already have a good image from the database, skip scraping
     if (image && !image.includes('unsplash.com') && !image.includes('example.com') && image.startsWith('http')) {
+      setScrapedImage(image);
       return;
     }
     
@@ -530,6 +532,12 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
       </div>
       
       <div>
+        {modelNumber && (
+          <div className="flex items-center gap-2 mb-2">
+            <Package className="w-4 h-4 text-primary" />
+            <span className="text-sm font-mono font-semibold text-primary">{modelNumber}</span>
+          </div>
+        )}
         <p className="font-medium text-sm text-foreground mb-2">
           {generateDescription(product, category || '', company)}
         </p>
