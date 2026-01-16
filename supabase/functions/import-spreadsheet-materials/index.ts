@@ -627,6 +627,16 @@ const spreadsheetBrands: BrandData[] = [
   { name: "Wittenstein", category: "Electric", catalogUrls: ["https://pdf.directindustry.com/pdf/wittenstein/electric-equipment-catalog-100.html"] },
 ];
 
+// Map spreadsheet categories to database categories
+const categoryMap: Record<string, string> = {
+  'Valve': 'Valves',
+  'Pump': 'Pumps',
+  'Tank': 'Tanks',
+  'PSV': 'Valves',  // PSVs are specialized valves
+  'Transmitter': 'Instrumentation',
+  'Electric': 'Electrical',
+};
+
 interface ProductInfo {
   name: string;
   description: string;
@@ -847,17 +857,18 @@ Deno.serve(async (req) => {
           .maybeSingle();
         
         if (!existing) {
+          // Map the category to the valid database category
+          const dbCategory = categoryMap[brand.category] || brand.category;
+          
           const { error: insertError } = await supabase
             .from('materials')
             .insert({
               manufacturer_id: manufacturer.id,
-              manufacturer_name: brand.name,
               product_name: product.name,
               title: `${brand.name} ${product.name}`,
-              description: product.description,
               image_url: product.image || null,
               model_number: product.modelNumber || null,
-              category: brand.category,
+              category: dbCategory,
             });
           
           if (!insertError) {
