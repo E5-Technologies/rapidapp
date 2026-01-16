@@ -135,26 +135,99 @@ const resolveLogo = (logoPath: string | null | undefined, companyName: string): 
   return null;
 };
 
-// Category-specific fallback product images
+// Category-specific fallback product images - industrial equipment stock photos
 const categoryImages: Record<string, string> = {
-  "Valves": "https://images.unsplash.com/photo-1504328345606-18bbc8c9d7d1?w=400&h=300&fit=crop",
-  "Pumps": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=400&h=300&fit=crop",
+  // Valve types
+  "Valves": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Gate Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Ball Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Check Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Globe Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Butterfly Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Control Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Relief Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Safety Valve": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  
+  // Pump types
+  "Pumps": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Centrifugal Pump": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Submersible Pump": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Diaphragm Pump": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Gear Pump": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Piston Pump": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Progressive Cavity Pump": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  
+  // Instrumentation
   "Instrumentation": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
+  "Pressure Gauge": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
+  "Flow Meter": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
+  "Level Transmitter": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
+  "Temperature Sensor": "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=300&fit=crop",
+  
+  // Electrical & Automation
   "Electrical": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-  "Piping": "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=400&h=300&fit=crop",
+  "Automation": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+  "Motor": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+  "VFD": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+  "PLC": "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
+  
+  // Piping & Fittings
+  "Piping": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop",
+  "Fittings": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop",
+  "Flanges": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop",
+  "Pipe": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop",
+  
+  // Vessels & Tanks
   "Vessels": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=400&h=300&fit=crop",
-  "Safety": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=400&h=300&fit=crop",
   "Tanks": "https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=400&h=300&fit=crop",
-  "Automation": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=300&fit=crop",
+  "Pressure Vessel": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=400&h=300&fit=crop",
+  "Heat Exchanger": "https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=400&h=300&fit=crop",
+  
+  // Safety Equipment
+  "Safety": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=400&h=300&fit=crop",
+  "Safety Equipment": "https://images.unsplash.com/photo-1504439468489-c8920d796a29?w=400&h=300&fit=crop",
+  
+  // Compressors & Filters
+  "Compressor": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Filter": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop",
+  "Strainer": "https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=400&h=300&fit=crop",
+  
+  // Generic industrial
+  "Industrial": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
+  "Equipment": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop",
 };
 
 // Cache for scraped images
 const scrapedImageCache = new Map<string, string | null>();
 
+// Default fallback for unmatched categories
+const DEFAULT_EQUIPMENT_IMAGE = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=400&h=300&fit=crop";
+
 // Get appropriate image for a product (without scraping - synchronous check)
-const getProductImageSync = (image: string | null, category: string, title: string): string | null => {
-  // If valid custom image URL exists (not placeholder), use it
-  if (image && !image.includes('unsplash.com/photo-1581092918056') && image.startsWith('http')) {
+const getProductImageSync = (image: string | null, category: string, title: string): string => {
+  // Check if image is a valid product image (not a banner/logo/placeholder)
+  const isValidProductImage = (url: string): boolean => {
+    if (!url || !url.startsWith('http')) return false;
+    const lower = url.toLowerCase();
+    // Reject common non-product image patterns
+    if (lower.includes('logo') || 
+        lower.includes('banner') || 
+        lower.includes('header') ||
+        lower.includes('icon') ||
+        lower.includes('favicon') ||
+        lower.includes('placeholder') ||
+        lower.includes('sprite') ||
+        lower.includes('social') ||
+        lower.includes('company-') ||
+        lower.includes('/brand/') ||
+        lower.includes('/logos/')) {
+      return false;
+    }
+    return true;
+  };
+  
+  // If valid custom image URL exists, use it
+  if (image && isValidProductImage(image)) {
     return image;
   }
   
@@ -163,14 +236,20 @@ const getProductImageSync = (image: string | null, category: string, title: stri
     return categoryImages[category];
   }
   
-  // Try to match category from title
+  // Try to match category from title (check full words)
+  const titleLower = title.toLowerCase();
   for (const [cat, url] of Object.entries(categoryImages)) {
-    if (title.toLowerCase().includes(cat.toLowerCase().slice(0, -1))) {
+    const catLower = cat.toLowerCase();
+    // Match if title contains the category name
+    if (titleLower.includes(catLower) || 
+        titleLower.includes(catLower.replace(/s$/, '')) || // singular form
+        titleLower.includes(catLower.replace(' ', '-'))) { // hyphenated form
       return url;
     }
   }
   
-  return null;
+  // Return default industrial equipment image
+  return DEFAULT_EQUIPMENT_IMAGE;
 };
 
 interface ProductCardProps {
@@ -284,34 +363,18 @@ const ProductCard = ({ company, logo, title, product, rating, image, dataSheet, 
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           )}
-          {productImage ? (
-            <img 
+          <img 
               src={productImage} 
               alt={product} 
               className="w-full h-40 object-cover rounded-lg"
               onError={(e) => {
                 const target = e.currentTarget;
-                // Try fallback image on error
-                if (fallbackImage && target.src !== fallbackImage) {
+                // Always fall back to category image on error
+                if (target.src !== fallbackImage) {
                   target.src = fallbackImage;
-                } else {
-                  target.style.display = 'none';
-                  const parent = target.parentElement;
-                  if (parent) {
-                    const fallbackDiv = document.createElement('div');
-                    fallbackDiv.className = 'w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2';
-                    fallbackDiv.innerHTML = '<span class="text-xs text-muted-foreground">Product Image</span>';
-                    parent.insertBefore(fallbackDiv, target);
-                  }
                 }
               }}
             />
-          ) : (
-            <div className="w-full h-40 bg-muted rounded-lg flex flex-col items-center justify-center gap-2">
-              <Package className="w-12 h-12 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">Product Image</span>
-            </div>
-          )}
           <Badge className="absolute bottom-2 right-2 bg-primary text-primary-foreground">
             Order
           </Badge>
