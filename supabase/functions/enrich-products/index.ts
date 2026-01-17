@@ -23,50 +23,105 @@ interface EnrichedProduct {
   image_url: string | null;
 }
 
-// Search for product images using Serper API
-async function searchForProductImage(
-  manufacturerName: string,
-  modelNumber: string,
+// Use curated high-quality industrial product images by category and type
+function getProductImageUrl(
   productName: string,
-  serperKey: string
-): Promise<string | null> {
-  try {
-    const searchQuery = `${manufacturerName} ${modelNumber} ${productName} product image`;
-    
-    const response = await fetch('https://google.serper.dev/images', {
-      method: 'POST',
-      headers: {
-        'X-API-KEY': serperKey,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        q: searchQuery,
-        num: 5,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Serper API error:', response.status);
-      return null;
+  category: string,
+  manufacturerName: string
+): string {
+  // Extract product type keywords
+  const nameLower = productName.toLowerCase();
+  const catLower = category.toLowerCase();
+  
+  // Curated product images from reputable sources (Unsplash industrial/manufacturing images)
+  const imagesByType: Record<string, string[]> = {
+    // Valves
+    'ball valve': [
+      'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&q=80',
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80'
+    ],
+    'gate valve': [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80',
+      'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&q=80'
+    ],
+    'butterfly valve': [
+      'https://images.unsplash.com/photo-1581093450021-4a7360e9a6b5?w=800&q=80'
+    ],
+    'check valve': [
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80'
+    ],
+    'globe valve': [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80'
+    ],
+    'control valve': [
+      'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&q=80'
+    ],
+    'safety valve': [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80'
+    ],
+    'plug valve': [
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80'
+    ],
+    // Pumps
+    'centrifugal pump': [
+      'https://images.unsplash.com/photo-1590797098825-93b1d5c55ce9?w=800&q=80'
+    ],
+    'submersible pump': [
+      'https://images.unsplash.com/photo-1590797098825-93b1d5c55ce9?w=800&q=80'
+    ],
+    'diaphragm pump': [
+      'https://images.unsplash.com/photo-1590797098825-93b1d5c55ce9?w=800&q=80'
+    ],
+    'gear pump': [
+      'https://images.unsplash.com/photo-1590797098825-93b1d5c55ce9?w=800&q=80'
+    ],
+    // Tanks
+    'storage tank': [
+      'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80'
+    ],
+    'pressure vessel': [
+      'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80'
+    ],
+    // Instrumentation
+    'pressure transmitter': [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80'
+    ],
+    'flow meter': [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80'
+    ],
+    'level transmitter': [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80'
+    ],
+    'temperature transmitter': [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80'
+    ],
+    // Electrical
+    'motor': [
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80'
+    ],
+    'actuator': [
+      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80'
+    ],
+  };
+  
+  // Category fallbacks
+  const categoryFallbacks: Record<string, string> = {
+    'valves': 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&q=80',
+    'pumps': 'https://images.unsplash.com/photo-1590797098825-93b1d5c55ce9?w=800&q=80',
+    'tanks': 'https://images.unsplash.com/photo-1518709766631-a6a7f45921c3?w=800&q=80',
+    'instrumentation': 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=800&q=80',
+    'electrical': 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80',
+  };
+  
+  // Try to find matching product type
+  for (const [type, urls] of Object.entries(imagesByType)) {
+    if (nameLower.includes(type)) {
+      return urls[Math.floor(Math.random() * urls.length)];
     }
-
-    const data = await response.json();
-    const images = data.images || [];
-
-    // Filter for manufacturer-related images
-    const manufacturerImage = images.find((img: any) => {
-      const url = img.imageUrl?.toLowerCase() || '';
-      const source = img.source?.toLowerCase() || '';
-      return url.includes(manufacturerName.toLowerCase()) || 
-             source.includes(manufacturerName.toLowerCase()) ||
-             url.includes('.png') || url.includes('.jpg') || url.includes('.webp');
-    });
-
-    return manufacturerImage?.imageUrl || images[0]?.imageUrl || null;
-  } catch (error) {
-    console.error('Error searching for image:', error);
-    return null;
   }
+  
+  // Fall back to category
+  return categoryFallbacks[catLower] || 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?w=800&q=80';
 }
 
 // Use AI to generate technical product description and extract model number
@@ -159,7 +214,7 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const SERPER_API_KEY = Deno.env.get('SERPER_API_KEY');
+    const FIRECRAWL_API_KEY = Deno.env.get('FIRECRAWL_API_KEY');
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')!;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -227,11 +282,11 @@ serve(async (req) => {
         console.log(`Enriching product: ${product.title} (${manufacturerName})`);
         const { description, modelNumber } = await enrichProductWithAI(productWithManufacturer, LOVABLE_API_KEY);
 
-        // Search for product image if not already present
+        // Get product image based on category/type
         let imageUrl = product.image_url;
-        if (!imageUrl && SERPER_API_KEY) {
-          console.log(`Searching for image: ${modelNumber} ${product.title}`);
-          imageUrl = await searchForProductImage(manufacturerName, modelNumber, product.title, SERPER_API_KEY);
+        if (!imageUrl) {
+          imageUrl = getProductImageUrl(product.title, product.category, manufacturerName);
+          console.log(`Assigned image for: ${product.title}`);
         }
 
         // Update the product in the database
