@@ -5,6 +5,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Map internal names to valid database categories
+const categoryMapping: Record<string, string> = {
+  'Valve': 'Valves',
+  'Pump': 'Pumps',
+  'PSV': 'Valves',  // PSVs are a type of valve
+  'Tank': 'Tanks',
+  'Transmitter': 'Instrumentation',
+  'Electric': 'Electrical',
+};
+
 // Comprehensive product templates with realistic technical specifications
 const productCatalog = {
   Valve: {
@@ -806,9 +816,12 @@ Deno.serve(async (req) => {
               return null;
             }
             
+            // Map internal category to valid database category
+            const dbCategory = categoryMapping[p.category] || p.category;
+            
             return {
               manufacturer_id: manufacturerId,
-              category: p.category,
+              category: dbCategory,
               title: p.title,
               product_name: p.product_name,
               model_number: p.model_number,
